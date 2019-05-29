@@ -1,4 +1,16 @@
-all: dl_samples extract chroplasmitor
+info:
+	@echo '"make samples" to generate contigs (implemented)'
+	@echo '"make metrics" to make a benchmark (not yet implemented)'
+	@echo '"make moon" to take down the moon (not yet implemented)'
+	@echo '"make info" to show this message (implemented)'
+
+samples: dl_samples extract chroplasmitor reads contigs
+
+moon:
+	@echo 'Sorry this feature is not yet implemented :/ But you can walking on the Moon with The Police'
+
+metrics:
+	@echo 'Sorry this feature is not yet implemented :/'
 
 dl_samples:
 	@mkdir -p samples
@@ -37,3 +49,12 @@ extract:
 chroplasmitor:
 	@echo Running the chroplasmitor
 	@scripts/chroplasmitor.py -g samples/complete_genomes/*.fna -o samples
+
+reads:
+	@echo Generating reads
+	@mkdir -p samples/reads
+	iss generate --genomes samples/chromosomes/*.fna --abundance_file scripts/abundance_file --model hiseq --output samples/reads/reads
+
+contigs:
+	@echo Generating contigs
+	@megahit -1 samples/reads/reads_R1.fastq -2 samples/reads/reads_R2.fastq -o samples/contigs/
