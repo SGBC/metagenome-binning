@@ -43,7 +43,7 @@ extract:
 	@echo It looks clean :D
 
 sort_entry:
-	@echo Running the chroplasmitor
+	@echo Running chroplasmitor (sorts entries)
 	@scripts/chroplasmitor.py -g samples/complete_genomes/*.fna -o samples
 
 reads:
