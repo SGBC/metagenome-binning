@@ -103,5 +103,11 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-# samples
-samples/*
+# samples folder
+samples/
+
+# vscode config files
+.vscode/
+
+# pipfile lock
+.Pipfile.lock
