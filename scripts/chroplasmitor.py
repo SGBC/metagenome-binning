@@ -1,20 +1,27 @@
-#! /usr/bin/python3
+#! /usr/bin/env python3
 # -*-coding:utf8-*-
 
-
+"""
+Chroplasmitor: CHROmosomes PLASmids MITochondrions extractOR
+Chroplasmitor is used to sort contigs based on their entry name in a fasta file.
+If the word "plasmid" is in the name of the entry, that if will go into the plasmids folder.
+If the word "mitochondrion" is in the name of the entry, that will go into the mitochondrial file.
+The rest will go into the chromosomes file.
+"""
 import argparse
 import os
 
 from Bio import SeqIO
 
 
-def writter(path, records):
+def writer(path, records):
     with open(path, "w") as file:
-        for record in records:
-            file.write(f">{record.description}\n")
-            for i in range(0, len(record.seq), 80):
-                file.write(f"{record.seq[i:i+80]}\n")
-            file.writelines("\n")
+        SeqIO.write(records, path, "fasta")
+        # for record in records:
+            # file.write(f">{record.description}\n")
+            # for i in range(0, len(record.seq), 80):
+            #     file.write(f"{record.seq[i:i+80]}\n")
+            # file.writelines("\n")
 
 
 def extract(args):
@@ -35,22 +42,22 @@ def extract(args):
             if not os.path.isdir(f"{args.output}/chromosomes"):
                 os.makedirs(f"{args.output}/chromosomes")
             chromo_path = f"{args.output}/chromosomes/{filename}"
-            writter(chromo_path, chromo)
+            writer(chromo_path, chromo)
         if plasmid:
             if not os.path.isdir(f"{args.output}/plasmids"):
                 os.makedirs(f"{args.output}/plasmids")
             plasmid_path = f"{args.output}/plasmids/{filename}"
-            writter(plasmid_path, plasmid)
+            writer(plasmid_path, plasmid)
         if mito:
             if not os.path.isdir(f"{args.output}/mitochondrions"):
                 os.makedirs(f"{args.output}/mitochondrions")
             plasmid_path = f"{args.output}/mitochondrions/{filename}"
-            writter(plasmid_path, mito)
+            writer(plasmid_path, mito)
 
 
 def main():
-    desc = "CHROmosomes PLASmids MITochondrion extractOR - \
-Extracts and separates chromosome, plamids and mitochondrion from an NCBI file"
+    desc = "CHROmosomes PLASmids MITochondrions extractOR - \
+Extracts and separates chromosome, plamids and mitochondrion from a fasta file"
     parser = argparse.ArgumentParser(
         prog="chroplasor",
         description=desc
