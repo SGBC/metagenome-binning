@@ -1,13 +1,9 @@
 info:
 	@echo '"make samples" to generate contigs (implemented)'
 	@echo '"make metrics" to make a benchmark (not yet implemented)'
-	@echo '"make moon" to take down the moon (not yet implemented)'
 	@echo '"make info" to show this message (implemented)'
 
-samples: dl_samples extract chroplasmitor reads contigs
-
-moon:
-	@echo 'Sorry this feature is not yet implemented :/ But you can walking on the Moon with The Police'
+samples: dl_samples extract sort_entry reads contigs
 
 metrics:
 	@echo 'Sorry this feature is not yet implemented :/'
@@ -46,7 +42,7 @@ extract:
 	@mv samples/*.fna samples/complete_genomes
 	@echo It looks clean :D
 
-chroplasmitor:
+sort_entry:
 	@echo Running the chroplasmitor
 	@scripts/chroplasmitor.py -g samples/complete_genomes/*.fna -o samples
 
