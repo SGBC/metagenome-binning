@@ -1,16 +1,26 @@
+blk = \e[0m
+red = \e[1m\e[31m
+green = \e[1m\e[32m
+yellow = \e[1m\e[38;5;208m
+lblue = \e[38;5;50m
+
 info:
-	@echo '"make samples" to generate contigs (implemented)'
-	@echo '"make metrics" to make a benchmark (not yet implemented)'
-	@echo '"make info" to show this message (implemented)'
+	@echo -e '"make info" \tto show this message \t\t$(green)(implemented)$(blk)'
+	@echo -e '"make samples" \tto generate contigs \t\t$(green)(implemented)$(blk)'
+	@echo -e '"make bins" \tto generate bins \t\t$(yellow)(partially implemented)$(blk)'
+	@echo -e '"make all" \tto generate contigs and bins \t$(yellow)(partially implemented)$(blk)'
 
 samples: dl_samples extract sort_entry reads contigs
 
-metrics:
-	@echo 'Sorry this feature is not yet implemented :/'
+bins: metabat
+	@echo -e '$(yellow)! The feature $(blk)$(lblue)"bins"$(yellow) is partially implemented and in testing :s$(blk)'
+
+all:
+	samples bins
 
 dl_samples:
 	@mkdir -p samples
-	@echo "Download samples(10)"
+	@echo "$(lblue)# Download samples(10)$(blk)"
 	@echo Download Bacillus subtilis
 	@wget -qO samples/Bacillus_subtilis.fna.gz ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/009/045/GCF_000009045.1_ASM904v1/GCF_000009045.1_ASM904v1_genomic.fna.gz
 	@echo Download Cryptococcus neoformans
@@ -35,22 +45,52 @@ dl_samples:
 extract:
 	@mkdir -p samples/archives
 	@mkdir -p samples/complete_genomes
-	@echo Extract the data
+	@echo "$(lblue)# Extract the data$(blk)"
 	@gunzip -kN samples/*.gz
-	@echo Organize the files
+	@echo "$(lblue)# Organize the files$(blk)"
 	@mv samples/*.gz samples/archives/
 	@mv samples/*.fna samples/complete_genomes
 	@echo It looks clean :D
 
 sort_entry:
-	@echo Running chroplasmitor (sorts entries)
+	@echo "$(lblue)# Running chroplasmitor (sorts entries)$(blk)"
 	@scripts/chroplasmitor.py -g samples/complete_genomes/*.fna -o samples
 
 reads:
-	@echo Generating reads
+	@echo "$(lblue)# Generating reads$(blk)"
 	@mkdir -p samples/reads
-	iss generate --genomes samples/chromosomes/*.fna --abundance_file scripts/abundance_file --model hiseq --output samples/reads/reads
+	@iss generate --genomes samples/chromosomes/*.fna --abundance_file scripts/abundance_file --model hiseq --output samples/reads/reads
 
 contigs:
-	@echo Generating contigs
+	@echo "$(lblue)# Generating contigs$(blk)"
 	@megahit -1 samples/reads/reads_R1.fastq -2 samples/reads/reads_R2.fastq -o samples/contigs/
+
+mapping:
+	@echo "$(lblue)# Mapping reads$(blk)"
+	@mkdir -p samples/metabat
+	@mkdir -p samples/metabat/map
+	@echo "$(lblue)# Run bowtie2-build$(blk)"
+	@bowtie2-build samples/contigs/final.contigs.fa samples/metabat/map/bt2_index_base
+	@echo "$(lblue)# Run bowtie2 and samtools view$(blk)"
+	@bowtie2 -x samples/metabat/map/bt2_index_base -1 samples/reads/reads_R1.fastq -2 samples/reads/reads_R2.fastq | samtools view -bS -o samples/metabat/map/reads_to_sort.bam
+	@echo "$(lblue)# Run samtools sort$(blk)"
+	@samtools sort samples/metabat/map/reads_to_sort.bam -o reads.bam
+	@echo "$(lblue)# Run samtools index$(blk)"
+	@samtools index reads.bam
+	@mv reads.bam samples/metabat/
+	@mv reads.bam.bai samples/metabat/
+
+metabat: mapping
+	@echo "$(lblue)# Run metabat$(blk)"
+	@runMetaBat.sh -m 1500 samples/contigs/final.contigs.fa samples/metabat/reads.bam
+	@rm -rf samples/metabat/final.contigs.fa.metabat-bins1500
+	@mv final.contigs.fa.metabat-bins1500 samples/metabat/
+	@mv final.contigs.fa.depth.txt samples/metabat/
+	@mv final.contigs.fa.paired.txt samples/metabat/
+
+concoct:
+	@echo "$(yellow)! Concoct implementation in progress$(blk)"
+	@mkdir -p samples/concoct
+	@mkdir -p samples/concoct/map
+	@source activate concoct_env
+	@bowtie2-build samples/contigs/final.contigs.fa samples/concoct/map/bt2_index_base

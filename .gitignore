@@ -111,3 +111,5 @@ samples/
 
 # pipfile lock
 .Pipfile.lock
+
+scripts/4NF_output

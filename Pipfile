@@ -4,10 +4,13 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+pep8 = "*"
 
 [packages]
 biopython = "*"
 insilicoseq = "*"
+bio = "*"
+plotly = "*"
 
 [requires]
 python_version = "3.6"
