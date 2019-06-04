@@ -110,6 +110,6 @@ samples/
 .vscode/
 
 # pipfile lock
-.Pipfile.lock
+Pipfile.lock
 
 scripts/4NF_output

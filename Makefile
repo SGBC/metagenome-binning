@@ -7,16 +7,21 @@ lblue = \e[38;5;50m
 info:
 	@echo -e '"make info" \tto show this message \t\t$(green)(implemented)$(blk)'
 	@echo -e '"make samples" \tto generate contigs \t\t$(green)(implemented)$(blk)'
-	@echo -e '"make bins" \tto generate bins \t\t$(yellow)(partially implemented)$(blk)'
-	@echo -e '"make all" \tto generate contigs and bins \t$(yellow)(partially implemented)$(blk)'
+	@echo -e '"make bins" \tto generate bins \t\t$(green)(implemented)$(blk)'
+	@echo -e '"make metrics"\tto evaluate binning\t\t$(yellow)(not yet fully implemented)$(blk)'
+	@echo -e '"make all" \tto generate contigs and bins \t$(yellow)(not yet fully implemented)$(blk)'
 
 samples: dl_samples extract sort_entry reads contigs
 
-bins: metabat
-	@echo -e '$(yellow)! The feature $(blk)$(lblue)"bins"$(yellow) is partially implemented and in testing :s$(blk)'
+bins: metabat concoct
 
-all:
-	samples bins
+metrics:
+	@echo -e '$(yellow)! Metrics are not yet fully implemented$(blk)'
+	@cat samples/metabat/time
+	@cat samples/concoct/time
+
+
+all: samples bins metrics
 
 dl_samples:
 	@mkdir -p samples
@@ -65,32 +70,46 @@ contigs:
 	@echo "$(lblue)# Generating contigs$(blk)"
 	@megahit -1 samples/reads/reads_R1.fastq -2 samples/reads/reads_R2.fastq -o samples/contigs/
 
-mapping:
+samples/mapping/reads.bam: samples/contigs/final.contigs.fa
 	@echo "$(lblue)# Mapping reads$(blk)"
-	@mkdir -p samples/metabat
-	@mkdir -p samples/metabat/map
+	@mkdir -p samples/mapping
 	@echo "$(lblue)# Run bowtie2-build$(blk)"
-	@bowtie2-build samples/contigs/final.contigs.fa samples/metabat/map/bt2_index_base
+	@bowtie2-build samples/contigs/final.contigs.fa samples/mapping/bt2_index_base
 	@echo "$(lblue)# Run bowtie2 and samtools view$(blk)"
-	@bowtie2 -x samples/metabat/map/bt2_index_base -1 samples/reads/reads_R1.fastq -2 samples/reads/reads_R2.fastq | samtools view -bS -o samples/metabat/map/reads_to_sort.bam
+	@bowtie2 -x samples/mapping/bt2_index_base -1 samples/reads/reads_R1.fastq -2 samples/reads/reads_R2.fastq | samtools view -bS -o samples/mapping/reads_to_sort.bam
 	@echo "$(lblue)# Run samtools sort$(blk)"
-	@samtools sort samples/metabat/map/reads_to_sort.bam -o reads.bam
+	@samtools sort samples/mapping/reads_to_sort.bam -o samples/mapping/reads.bam
 	@echo "$(lblue)# Run samtools index$(blk)"
-	@samtools index reads.bam
-	@mv reads.bam samples/metabat/
-	@mv reads.bam.bai samples/metabat/
+	@samtools index samples/mapping/reads.bam
 
-metabat: mapping
+metabat: samples/mapping/reads.bam 
+	@echo "$(yellow)=== Metabat ===$(blk)"
+	@mkdir -p samples/metabat
+	@echo "=== Time running Metabat ===" > samples/metabat/time
+	@echo Start @\t `date` >> samples/metabat/time
 	@echo "$(lblue)# Run metabat$(blk)"
-	@runMetaBat.sh -m 1500 samples/contigs/final.contigs.fa samples/metabat/reads.bam
+	@runMetaBat.sh -m 1500 samples/contigs/final.contigs.fa samples/mapping/reads.bam
 	@rm -rf samples/metabat/final.contigs.fa.metabat-bins1500
 	@mv final.contigs.fa.metabat-bins1500 samples/metabat/
 	@mv final.contigs.fa.depth.txt samples/metabat/
 	@mv final.contigs.fa.paired.txt samples/metabat/
+	@echo End @\t `date` >> samples/metabat/time
 
-concoct:
-	@echo "$(yellow)! Concoct implementation in progress$(blk)"
+concoct: samples/mapping/reads.bam
+	@echo "$(yellow)=== Concoct ===$(blk)"
 	@mkdir -p samples/concoct
-	@mkdir -p samples/concoct/map
-	@source activate concoct_env
-	@bowtie2-build samples/contigs/final.contigs.fa samples/concoct/map/bt2_index_base
+	@echo "=== Time running Concoct ===" > samples/concoct/time
+	@echo Start @\t `date` >> samples/concoct/time
+	@echo "$(lblue)# Cut contigs in small part$(blk)"
+	@cut_up_fasta.py samples/contigs/final.contigs.fa  -c 10000 -o 0 --merge_last -b samples/concoct/contigs_10K.bed > samples/concoct/contigs_10K.fa
+	@echo "$(lblue)# Generate table of coverage depth$(blk)"
+	@concoct_coverage_table.py samples/concoct/contigs_10K.bed samples/mapping/reads.bam > samples/concoct/coverage_table.tsv
+	@echo "$(lblue)# Run concoct$(blk)"
+	@concoct --composition_file samples/concoct/contigs_10K.fa --coverage_file samples/concoct/coverage_table.tsv -b samples/concoct/output/
+	@echo "$(lblue)# Merge subcontigs clustering$(blk)"
+	@rm -rf samples/concoct/fasta_bins
+	@merge_cutup_clustering.py samples/concoct/output/clustering_gt1000.csv > samples/concoct/output/clustering_merged.csv
+	@mkdir samples/concoct/fasta_bins
+	@echo "$(lblue)# Extract Bins$(blk)"
+	@extract_fasta_bins.py samples/contigs/final.contigs.fa samples/concoct/output/clustering_merged.csv --output_path samples/concoct/fasta_bins
+	@echo End @\t `date` >> samples/concoct/time
