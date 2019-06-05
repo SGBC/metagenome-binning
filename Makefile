@@ -9,7 +9,7 @@ info:
 	@echo -e '"make samples" \tto generate contigs \t\t$(green)(implemented)$(blk)'
 	@echo -e '"make bins" \tto generate bins \t\t$(green)(implemented)$(blk)'
 	@echo -e '"make metrics"\tto evaluate binning\t\t$(yellow)(not yet fully implemented)$(blk)'
-	@echo -e '"make server"\tto import all necessary to run the makefile on the HGEN server
+	@echo -e '"make server"\tto import all necessary to run the makefile on the HGEN server'
 	@echo -e '"make all" \tto generate contigs and bins \t$(yellow)(not yet fully implemented)$(blk)'
 
 samples: dl_samples extract sort_entry reads contigs
