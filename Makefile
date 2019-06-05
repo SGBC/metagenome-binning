@@ -64,7 +64,7 @@ sort_entry:
 reads:
 	@echo "$(lblue)# Generating reads$(blk)"
 	@mkdir -p samples/reads
-	@iss generate --genomes samples/chromosomes/*.fna --abundance_file scripts/abundance_file --model hiseq --output samples/reads/reads
+	@iss generate --genomes samples/chromosomes/*.fna --abundance_file scripts/abundance_file --model hiseq --output samples/reads/reads --n_reads 8M --cpus `grep -c ^processor /proc/cpuinfo`
 
 contigs:
 	@echo "$(lblue)# Generating contigs$(blk)"
@@ -93,6 +93,8 @@ metabat: samples/mapping/reads.bam
 	@mv final.contigs.fa.metabat-bins1500 samples/metabat/
 	@mv final.contigs.fa.depth.txt samples/metabat/
 	@mv final.contigs.fa.paired.txt samples/metabat/
+	@mv samples/metabat/final.contigs.fa.metabat-bins1500 samples/metabat/fasta_bins
+	@scripts/metabin_rename.py
 	@echo End @\t `date` >> samples/metabat/time
 
 concoct: samples/mapping/reads.bam
