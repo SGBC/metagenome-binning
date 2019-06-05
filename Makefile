@@ -52,6 +52,7 @@ dl_samples:
 	@wget -qO samples/Staphylococcus_aureus.fna.gz ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/013/425/GCF_000013425.1_ASM1342v1/GCF_000013425.1_ASM1342v1_genomic.fna.gz
 
 extract:
+	@mkdir samples/complete_genomes
 	@echo "$(lblue)# Extract the data$(blk)"
 	@gunzip -N samples/*.gz
 	@echo "$(lblue)# Organize the files$(blk)"
