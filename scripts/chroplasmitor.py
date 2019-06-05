@@ -17,14 +17,10 @@ from Bio import SeqIO
 def writer(path, records):
     with open(path, "w") as file:
         SeqIO.write(records, path, "fasta")
-        # for record in records:
-            # file.write(f">{record.description}\n")
-            # for i in range(0, len(record.seq), 80):
-            #     file.write(f"{record.seq[i:i+80]}\n")
-            # file.writelines("\n")
 
 
 def extract(args):
+    path = os.path.abspath(args.output)
     for genome in args.genomes:
         f = open(genome, "r")
         plasmid, chromo, mito = [], [], []
@@ -39,19 +35,19 @@ def extract(args):
                     chromo.append(record)
         filename = os.path.basename(genome)
         if chromo:
-            if not os.path.isdir(f"{args.output}/chromosomes"):
-                os.makedirs(f"{args.output}/chromosomes")
-            chromo_path = f"{args.output}/chromosomes/{filename}"
+            if not os.path.isdir(f"{path}/chromosomes"):
+                os.makedirs(f"{path}/chromosomes")
+            chromo_path = f"{path}/chromosomes/{filename}"
             writer(chromo_path, chromo)
         if plasmid:
-            if not os.path.isdir(f"{args.output}/plasmids"):
-                os.makedirs(f"{args.output}/plasmids")
-            plasmid_path = f"{args.output}/plasmids/{filename}"
+            if not os.path.isdir(f"{path}/plasmids"):
+                os.makedirs(f"{path}/plasmids")
+            plasmid_path = f"{path}/plasmids/{filename}"
             writer(plasmid_path, plasmid)
         if mito:
-            if not os.path.isdir(f"{args.output}/mitochondrions"):
-                os.makedirs(f"{args.output}/mitochondrions")
-            plasmid_path = f"{args.output}/mitochondrions/{filename}"
+            if not os.path.isdir(f"{path}/mitochondrions"):
+                os.makedirs(f"{path}/mitochondrions")
+            plasmid_path = f"{path}/mitochondrions/{filename}"
             writer(plasmid_path, mito)
 
 
