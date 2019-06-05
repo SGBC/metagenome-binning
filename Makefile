@@ -9,11 +9,21 @@ info:
 	@echo -e '"make samples" \tto generate contigs \t\t$(green)(implemented)$(blk)'
 	@echo -e '"make bins" \tto generate bins \t\t$(green)(implemented)$(blk)'
 	@echo -e '"make metrics"\tto evaluate binning\t\t$(yellow)(not yet fully implemented)$(blk)'
+	@echo -e '"make server"\tto import all necessary to run the makefile on the HGEN server
 	@echo -e '"make all" \tto generate contigs and bins \t$(yellow)(not yet fully implemented)$(blk)'
 
 samples: dl_samples extract sort_entry reads contigs
 
-bins: metabat concoct
+server:
+	module load python/3.7.3
+	module load insilicoseq/1.1.1
+	module load megahit/1.1.4
+	module load bowtie/2.2.9
+	module load samtools/1.3.1
+	module load metabat/2.11.1
+	module load concoct/1.0.0
+
+bins: metabat #concoct
 
 metrics:
 	@echo -e '$(yellow)! Metrics are not yet fully implemented$(blk)'
@@ -21,7 +31,7 @@ metrics:
 	@cat samples/concoct/time
 
 
-all: samples bins metrics
+all: samples bins 
 
 dl_samples:
 	@mkdir -p samples
