@@ -102,3 +102,14 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# samples folder
+samples/
+
+# vscode config files
+.vscode/
+
+# pipfile lock
+Pipfile.lock
+
+scripts/4NF_output
