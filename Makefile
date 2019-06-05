@@ -15,13 +15,13 @@ info:
 samples: dl_samples extract sort_entry reads contigs
 
 server:
-	module load python/3.7.3
-	module load insilicoseq/1.1.1
-	module load megahit/1.1.4
-	module load bowtie/2.2.9
-	module load samtools/1.3.1
-	module load metabat/2.11.1
-	module load concoct/1.0.0
+	@module load python/3.7.3
+	@module load insilicoseq/1.1.1
+	@module load megahit/1.1.4
+	@module load bowtie/2.2.9
+	@module load samtools/1.3.1
+	@module load metabat/2.11.1
+	@module load concoct/1.0.0
 
 bins: metabat #concoct
 
