@@ -2,7 +2,7 @@ blk = \e[0m
 red = \e[1m\e[31m
 green = \e[1m\e[32m
 yellow = \e[1m\e[38;5;208m
-lblue = \e[38;5;50m
+lblue = \e[96mLight cyan
 
 info:
 	@echo -e '"make info" \tto show this message \t\t$(green)(implemented)$(blk)'
