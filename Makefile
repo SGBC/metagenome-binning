@@ -15,7 +15,7 @@ info:
 samples: dl_samples extract sort_entry reads contigs
 
 server:
-	source scripts/modules_load
+	bash scripts/modules_load
 
 bins: metabat #concoct
 
