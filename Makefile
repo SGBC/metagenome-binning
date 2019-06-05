@@ -2,7 +2,7 @@ blk = \e[0m
 red = \e[1m\e[31m
 green = \e[1m\e[32m
 yellow = \e[1m\e[38;5;208m
-lblue = \e[96mLight cyan
+lblue = \e[1m\e[1;36m
 
 info:
 	@echo -e '"make info" \tto show this message \t\t$(green)(implemented)$(blk)'
@@ -52,9 +52,9 @@ dl_samples:
 	@wget -qO samples/Staphylococcus_aureus.fna.gz ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/013/425/GCF_000013425.1_ASM1342v1/GCF_000013425.1_ASM1342v1_genomic.fna.gz
 
 extract:
-	@mkdir samples/complete_genomes
+	@mkdir -p samples/complete_genomes
 	@echo "$(lblue)# Extract the data$(blk)"
-	@gunzip -N samples/*.gz
+	@gunzip -Nf samples/*.gz
 	@echo "$(lblue)# Organize the files$(blk)"
 	@mv samples/*.fna samples/complete_genomes
 	@echo It looks clean :D
