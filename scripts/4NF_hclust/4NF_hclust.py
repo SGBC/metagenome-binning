@@ -47,6 +47,24 @@ def load(files, kmer, nucl_list):
     return n_matrix, contigs_table
 
 
+def save(files, clust, contigs, output):
+    print("sorting contigs")
+    bins = {}
+    for file in files:
+        f = open(file)
+        with f :
+            fasta = SeqIO.parse(f, "fasta")
+            for record in fasta:
+                bnumber = clust[contigs.index(record.id)]
+                if bnumber in bins.keys():
+                    bins[bnumber].append(record)
+                else:
+                    bins[bnumber] = [record]
+    print("Writing data")
+    for k in bins.keys():
+        SeqIO.write(bins[k], f"{output}/{k}.faa", "fasta")
+
+
 # 4NF computation
 def nf(seq, kmer, nucl_list):  # Nucleotides frequence
     nf_dict = {}
@@ -113,9 +131,11 @@ def main():
     os.makedirs(f"{args.output}", exist_ok=True)
     nucl_list = ["".join(i) for i in product("ATCG", repeat=args.kmer)]
     nf_matrix, c_tables = load(args.input, args.kmer, nucl_list)
-    dist_matrix = pairwise_distances(nf_matrix, metric="cityblock", n_jobs=args.cpus)
-    tree = linkage(squareform(dist_matrix), method="complete", metric="cityblock")
-    print(tree)
+    # dist_matrix = pairwise_distances(nf_matrix, metric="cityblock", n_jobs=args.cpus)
+    # tree = linkage(squareform(dist_matrix), method="complete", metric="cityblock")
+    print("Clustering")
+    cluster = AC(affinity="cityblock", compute_full_tree=True, linkage="complete", n_clusters=args.cpus).fit_predict(nf_matrix,c_tables)
+    save(args.input, cluster, c_tables, args.output)
 
 
 if __name__ == "__main__":

@@ -15,6 +15,8 @@ from Bio import SeqIO
 REF_path = "samples/chromosomes/"
 META_path = "samples/metabat/fasta_bins/"
 CONC_path = "samples/concoct/fasta_bins/"
+TNF_HCLUST = "samples/4NF_hclust_bins/"
+PNF_HCLUST = "samples/5NF_hclust_bins/"
 
 
 class SoftwareNotFoundError(Exception):
@@ -35,7 +37,7 @@ def software_exists(software_name):
         raise SoftwareNotFoundError(software_name)
 
 
-def m_andi(ref_path, bins_path):
+def m_andi(ref_path, bins_path, name):
     andi = software_exists("andi")
     refs = os.listdir(ref_path)
     refs = [f"{ref_path}{i}" for i in refs]
@@ -53,18 +55,31 @@ def m_andi(ref_path, bins_path):
     ref_res = samples[:len(refs)]
     bins_res = samples[len(refs):]
     matrix = []
+    maxi = 0
     for r in ref_res:
         line = []
         for b in bins_res:
             value = result[samples.index(r)][samples.index(b)]
             if value == "nan":
-                line.append(1)
+                line.append(-10)
             else:
+                maxi = max(maxi, float(value))
                 line.append(float(value))
         matrix.append(line)
-    trace = Heatmap(z=matrix, x=[f"bin_{i}" for i in bins_res], y=ref_res, colorscale=[[0,"#33BF00"], [1,"#FFFFFF"]])
+    outvalue = maxi * 1.001
+    for x in range(0,len(matrix)):
+        for y in range(0,len(matrix[x])):
+            if matrix[x][y] == -10:
+                matrix[x][y] = 1
+            else:
+                matrix[x][y] = matrix[x][y]/outvalue
+    trace = Heatmap(z=matrix, x=[f"bin_{i}" for i in bins_res], y=ref_res, colorscale=[[0, "#33BF00"], [maxi/outvalue, "#FFFFFF"], [1,"#8c00bf"]])
     data = [trace]
-    plot(data)
+    layout = go.Layout(
+        title=f"andi on {name} set."
+    )
+    fig = go.Figure(data, layout)
+    plot(fig)
     return(samples, result)
 
 
@@ -160,21 +175,21 @@ def draw_prod_data(bins):
     fig = go.Figure(data=trace, layout=layout)
     plot(fig)
 
-hashs_ref = json.loads(open("metrics/hashs_ref").read())
+
+def tests(test_path, ref_path, metaname):
+    print(f"Run metrics on {metaname} bins")
+    refs = os.listdir(test_path)
+    refs_path = [f"{test_path}{i}" for i in refs]
+    # for i in range(0, len(refs)):
+    #     prodigal(refs_path[i], f"{metaname}_{i}", output_dir="metrics")
+    # data = exploit_prod_data(refs, refs_path, hashs_ref)
+    # draw_prod_data(data)
+    metabat = m_andi(ref_path, test_path, metaname)
+
+
+# hashs_ref = json.loads(open("metrics/hashs_ref").read())
 os.makedirs("metrics", exist_ok=True)
-print("Run metrics on Metabat bins")
-refs = os.listdir(META_path)
-refs_path = [f"{META_path}{i}" for i in refs]
-for i in range(0, len(refs)):
-    prodigal(refs_path[i], f"META_{i}", output_dir="metrics")
-data = exploit_prod_data(refs, refs_path, hashs_ref)
-draw_prod_data(data)
-metabat = m_andi(REF_path, META_path)
-print("Run metrics on Concoct bins")
-refs = os.listdir(CONC_path)
-refs_path = [f"{CONC_path}{i}" for i in refs]
-for i in range(0, len(refs)):
-    prodigal(refs_path[i], f"CONC_{i}", output_dir="metrics")
-data = exploit_prod_data(refs, refs_path, hashs_ref)
-draw_prod_data(data)
-concoct = m_andi(REF_path, CONC_path)
+path = [META_path, CONC_path, TNF_HCLUST, PNF_HCLUST]
+metaname = ["metabat", "concoct", "4NF_hclust", "5NF_hclust"]
+for p, m in zip(path, metaname):
+    tests(p, REF_path, m)
