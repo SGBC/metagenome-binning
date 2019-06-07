@@ -17,7 +17,7 @@ samples: dl_samples extract sort_entry reads contigs
 server:
 	bash scripts/modules_load
 
-bins: metabat #concoct
+bins: metabat concoct
 
 metrics:
 	@echo -e '$(yellow)! Metrics are not yet fully implemented$(blk)'
