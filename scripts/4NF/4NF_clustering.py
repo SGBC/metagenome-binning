@@ -43,7 +43,7 @@ def main():
     nucl_list = ["".join(i) for i in product("ATCG", repeat=args.kmer)]
     contigs = load(args.input, nucl_list, args.kmer, args.output)
     dendrogram_tetra(contigs, cpu=os.cpu_count()-1, output=args.output)
-    print(end)
+    print("end")
 
 
 if __name__ == "__main__":
