@@ -13,6 +13,9 @@ from sklearn.cluster import AgglomerativeClustering as AC
 from scipy.cluster.hierarchy import linkage
 from scipy.spatial.distance import squareform
 
+from plotly.offline import plot
+import plotly.graph_objs as go
+
 
 # loading files
 def load(files, kmer, nucl_list):
@@ -25,25 +28,12 @@ def load(files, kmer, nucl_list):
         with f:
             fasta = SeqIO.parse(f, "fasta")
             for record in fasta:
-                l_matrix.append(nf(record.seq, 4, nucl_list))
+                l_matrix.append(nf(record.seq, kmer, nucl_list))
                 contigs_table.append(record.id)
                 count += 1
                 print(f"\rImported contigs : {count}", end="")
     print("\nLoading succesfully")
-    # vector_matrix = []
-    # coord_dict = {}
-    # print("Creation of vector matrix")
-    # nb_entry = len(l_matrix)**2
-    # cnt_op = 0
-    # for i in l_matrix:
-    #     line = []
-    #     for j in l_matrix:
-    #         line.append([i, j])
-    #         coord_dict[(len(vector_matrix), len(line)-1)] = (contigs_table[l_matrix.index(i)], contigs_table[l_matrix.index(j)])
-    #         cnt_op +=1
-    #         print(f"\rVector matrix : {round((cnt_op/nb_entry)*100, 2)}%", end="")
     n_matrix = np.array(l_matrix)
-    #contigs_table = np.array(contigs_table)
     return n_matrix, contigs_table
 
 
@@ -52,7 +42,7 @@ def save(files, clust, contigs, output):
     bins = {}
     for file in files:
         f = open(file)
-        with f :
+        with f:
             fasta = SeqIO.parse(f, "fasta")
             for record in fasta:
                 bnumber = clust[contigs.index(record.id)]
@@ -84,9 +74,6 @@ def nf(seq, kmer, nucl_list):  # Nucleotides frequence
         else:
             nf_list.append(0)
     return tuple(nf_list)
-
-
-# hclust
 
 
 # main function
@@ -128,15 +115,41 @@ def main():
         help="number of cpus allowed"
     )
     args = parser.parse_args()
-    os.makedirs(f"{args.output}", exist_ok=True)
     nucl_list = ["".join(i) for i in product("ATCG", repeat=args.kmer)]
     nf_matrix, c_tables = load(args.input, args.kmer, nucl_list)
-    # dist_matrix = pairwise_distances(nf_matrix, metric="cityblock", n_jobs=args.cpus)
-    # tree = linkage(squareform(dist_matrix), method="complete", metric="cityblock")
     print("Clustering")
-    cluster = AC(affinity="cityblock", compute_full_tree=True, linkage="complete", n_clusters=args.cpus).fit_predict(nf_matrix,c_tables)
-    save(args.input, cluster, c_tables, args.output)
+    seuil, n_clust = [], []
+    i = 0.0
+    while i <= 2:
+        i += 0.01
+        print(f"\r {round(i,4)}/2", end="")
+        output = f"{args.output}/{str(i)}"
+        # os.makedirs(f"{output}", exist_ok=True)
+        cluster = AC(affinity="cityblock", compute_full_tree=True, linkage="complete", distance_threshold=i, n_clusters=None).fit_predict(nf_matrix)
+        seuil.append(i)
+        n_clust.append(max(cluster))
+        #save(args.input, cluster, c_tables, output)
 
+    trace = go.Scatter(
+        x = seuil,
+        y = n_clust,
+        mode="lines",
+        name='Number of clusters found'
+    )
+
+    trace2 = go.Scatter(
+        x = seuil,
+        y = [10 for i in seuil],
+        mode='lines',
+        name="Real number of organisms"
+    )
+    layout = go.Layout(
+        title=f"Number of cluster on the distance threshold value (Hclust method, linkage complete, affinity cityblock, compute fulltree = true, k={args.kmer})",
+        xaxis=dict(title="distance threshold value"),
+        yaxis=dict(title="Number of cluster")
+    )
+    fig = dict(data=[trace, trace2], layout=layout)
+    plot(fig)
 
 if __name__ == "__main__":
     main()
