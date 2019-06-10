@@ -11,6 +11,8 @@ biopython = "*"
 insilicoseq = "*"
 bio = "*"
 plotly = "*"
+pandas = "*"
+scikit-learn = "*"
 
 [requires]
 python_version = "3.6"

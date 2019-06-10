@@ -13,8 +13,8 @@ from sklearn.cluster import AgglomerativeClustering as AC
 from scipy.cluster.hierarchy import linkage
 from scipy.spatial.distance import squareform
 
-from plotly.offline import plot
-import plotly.graph_objs as go
+# from plotly.offline import plot
+# import plotly.graph_objs as go
 
 
 # loading files
@@ -52,7 +52,7 @@ def save(files, clust, contigs, output):
                     bins[bnumber] = [record]
     print("Writing data")
     for k in bins.keys():
-        SeqIO.write(bins[k], f"{output}/{k}.faa", "fasta")
+        SeqIO.write(bins[k], f"{output}/{k}.fna", "fasta")
 
 
 # 4NF computation
@@ -115,47 +115,43 @@ def main():
         help="number of cpus allowed"
     )
     args = parser.parse_args()
-    trace = []
+    # trace = []
 
-    trace.append(
-        go.Scatter(
-            x=[i/100 for i in range(0, 200)],
-            y=[10 for i in range(0, 200)],
-            mode='lines',
-            name="Real number of organisms"
-            ))
+    # trace.append(
+    #     go.Scatter(
+    #         x=[i/100 for i in range(0, 200)],
+    #         y=[10 for i in range(0, 200)],
+    #         mode='lines',
+    #         name="Real number of organisms"
+    #         ))
 
-    for kmer in [3, 4, 5]:
+    for kmer, dist in zip([3, 4, 5], [0.95, 1.4, 1.82]):
         nucl_list = ["".join(i) for i in product("ATCG", repeat=kmer)]
         nf_matrix, c_tables = load(args.input, kmer, nucl_list)
         print("Clustering")
-        seuil, n_clust = [], []
-        i = 0.0
-        while i <= 2:
-            i += 0.01
-            print(f"\r {round(i,4)}/2", end="")
-            output = f"{args.output}/{str(i)}"
-            # os.makedirs(f"{output}", exist_ok=True)
-            cluster = AC(affinity="cityblock", compute_full_tree=True, linkage="complete", distance_threshold=i, n_clusters=None).fit_predict(nf_matrix)
-            seuil.append(i)
-            n_clust.append(max(cluster))
-            # save(args.input, cluster, c_tables, output)
+        # seuil, n_clust = [], []
+        output = f"{args.output}/{str(kmer)}"
+        os.makedirs(f"{output}", exist_ok=True)
+        cluster = AC(affinity="cityblock", compute_full_tree=True, linkage="complete", distance_threshold=dist, n_clusters=None).fit_predict(nf_matrix)
+        # seuil.append(i)
+        # n_clust.append(max(cluster))
+        save(args.input, cluster, c_tables, output)
 
-        trace.append(
-            go.Scatter(
-                x=seuil,
-                y=n_clust,
-                mode="lines",
-                name=f'Number of clusters found for k={kmer}'
-                ))
+    #     trace.append(
+    #         go.Scatter(
+    #             x=seuil,
+    #             y=n_clust,
+    #             mode="lines",
+    #             name=f'Number of clusters found for k={kmer}'
+    #             ))
 
-    layout = go.Layout(
-        title=f"Number of cluster on the distance threshold value (Hclust method, linkage complete, affinity cityblock, compute fulltree = true)",
-        xaxis=dict(title="distance threshold value"),
-        yaxis=dict(title="Number of cluster")
-    )
-    fig = dict(data=trace, layout=layout)
-    plot(fig)
+    # layout = go.Layout(
+    #     title=f"Number of cluster on the distance threshold value (Hclust method, linkage complete, affinity cityblock, compute fulltree = true)",
+    #     xaxis=dict(title="distance threshold value"),
+    #     yaxis=dict(title="Number of cluster")
+    # )
+    # fig = dict(data=trace, layout=layout)
+    # plot(fig)
 
 if __name__ == "__main__":
     main()
