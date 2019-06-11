@@ -1,11 +1,9 @@
-#! /usr/bin/env python3.7
+#! /usr/bin/env python3
 # -*-coding:utf8-*-
 
 import subprocess
 import os
 import shutil
-
-REF_path = "samples/chromosomes/"
 
 
 class SoftwareNotFoundError(Exception):
@@ -26,19 +24,16 @@ def software_exists(software_name):
         raise SoftwareNotFoundError(software_name)
 
 
-def prokka(ref_path, ref_name, outdir):
-    prokka = software_exists("prokka")
-    args = [prokka, "--outdir", outdir]
-    args += ["--force", "--prefix", ref_name, ref_path]
+def diamond_db(db_name, ref):
+    diamond = software_exists("diamond")
+    args = [diamond, "makedb", "--in", ref, "-d", db_name]
     subprocess.run(args)
 
-
-print("starting")
-os.makedirs("samples/prot_map", exist_ok=True)
-refs = os.listdir(REF_path)
-refs_path = [f"{REF_path}{i}" for i in refs]
-refs_name = [f"{i[:-4]}" for i in refs]
-for i in range(0, len(refs)):
-    print(f"run prokka on {refs_name[i]}")
-    prokka(refs_path[i], refs_name[i], "samples/prot_map")
+os.makedirs("samples/diamond_db")
+maps = os.listdir("samples/prot_map")
+maps_name = [i for i in maps if ".faa" in i]
+maps = [f"samples/prot_map/{i}" for i in maps_name]
+dbs = [f"samples/diamond_db/{i[:-4]}" for i in maps_name]
+for i in range(0, len(maps_name)):
+    diamond_db(dbs[i], maps[i])
 print("done")

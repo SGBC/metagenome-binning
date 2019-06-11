@@ -16,7 +16,8 @@ from scipy.spatial.distance import squareform
 # from plotly.offline import plot
 # import plotly.graph_objs as go
 
-
+kmers = [3,4,5]
+seuils = [0.95, 1.4, 1.82]
 # loading files
 def load(files, kmer, nucl_list):
     print("Loading contigs")
@@ -52,7 +53,7 @@ def save(files, clust, contigs, output):
                     bins[bnumber] = [record]
     print("Writing data")
     for k in bins.keys():
-        SeqIO.write(bins[k], f"{output}/{k}.fna", "fasta")
+        SeqIO.write(bins[k], f"{output}/{k}.fa", "fasta")
 
 
 # 4NF computation
@@ -125,17 +126,21 @@ def main():
     #         name="Real number of organisms"
     #         ))
 
-    for kmer, dist in zip([3, 4, 5], [0.95, 1.4, 1.82]):
-        nucl_list = ["".join(i) for i in product("ATCG", repeat=kmer)]
-        nf_matrix, c_tables = load(args.input, kmer, nucl_list)
-        print("Clustering")
-        # seuil, n_clust = [], []
-        output = f"{args.output}/{str(kmer)}"
-        os.makedirs(f"{output}", exist_ok=True)
-        cluster = AC(affinity="cityblock", compute_full_tree=True, linkage="complete", distance_threshold=dist, n_clusters=None).fit_predict(nf_matrix)
-        # seuil.append(i)
-        # n_clust.append(max(cluster))
-        save(args.input, cluster, c_tables, output)
+    kmer = args.kmer
+    nucl_list = ["".join(i) for i in product("ATCG", repeat=kmer)]
+    nf_matrix, c_tables = load(args.input, kmer, nucl_list)
+    print("Clustering")
+    # seuil, n_clust = [], []
+    output = f"{args.output}"
+    os.makedirs(f"{output}", exist_ok=True)
+    if kmer in kmers:
+        dist = seuils[kmers.index(kmer)]
+    else:
+        dist = 1.5
+    cluster = AC(affinity="cityblock", compute_full_tree=True, linkage="complete", distance_threshold=dist, n_clusters=None).fit_predict(nf_matrix)
+    # seuil.append(i)
+    # n_clust.append(max(cluster))
+    save(args.input, cluster, c_tables, output)
 
     #     trace.append(
     #         go.Scatter(

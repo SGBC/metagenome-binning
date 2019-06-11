@@ -19,13 +19,17 @@ server:
 
 bins: metabat concoct
 
-metrics: samples/prot_map/*
+metrics:
 	@echo -e '$(yellow)! Metrics are not yet fully implemented$(blk)'
 	@cat samples/metabat/time
 	@cat samples/concoct/time
+	@scripts/metrics.py
 
-samples/prot_map/*: samples/contigs/final.contigs.fa
-	scripts/prot_map_ref.py
+# samples/diamond_db/*: samples/prot_map/*
+# 	scripts/diamond_db.py
+
+# samples/prot_map/*: samples/contigs/final.contigs.fa
+# 	scripts/prot_map_ref.py
 
 all: samples bins 
 
