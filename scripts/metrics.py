@@ -134,113 +134,103 @@ def draw(data, setname):
         title=f"{setname} bins"
     )
     fig = go.Figure(data=values, layout=layout)
-    plot(fig)
+    # plot(fig)
+    return plot(fig, include_plotlyjs=True, output_type='div')
 
 
-def m_andi(ref_path, bins_path, name):
+def m_andi2(ref_path, bins_path, name):
     andi = software_exists("andi")
     refs = os.listdir(ref_path)
     refs = [f"{ref_path}/{i}" for i in refs]
     query = os.listdir(bins_path)
-    query = [f"{bins_path}/{i}" for i in query]
-    args = [andi, "-j"]
-    args += refs + query
-    args += ["2> /dev/null"]
+    query_path = [f"{bins_path}/{i}" for i in query]
+    ref_index = "samples/chromosomes/index_chromo"
+    ref_index = json.loads(open(ref_index).read())
+    query_index = {}
+    for q in query_path:
+        file = open(q)
+        with file:
+            bin_record = []
+            fasta = SeqIO.parse(file, "fasta")
+            for record in fasta:
+                sid = record.id
+                lenght = len(str(record.seq))
+                bin_record.append((sid, lenght))
+            query_index[query[query_path.index(q)]] = bin_record
+    args = [andi] + refs + query_path + ["2> /dev/null"]
+    # print(args)
     andi_out = subprocess.run(args, capture_output=True)
     andi_out = andi_out.stdout.decode('ascii')
     andi_txt = [i.split(" ") for i in andi_out.split("\n")][1:-1]
     samples = [i[0] for i in andi_txt]
     result = [i[1:] for i in andi_txt]
     result = [[i for i in a if i != ""] for a in result]
-    ref_res = samples[:len(refs)]
-    bins_res = samples[len(refs):]
-    matrix = []
-    maxi = 0
-    for r in ref_res:
-        line = []
-        for b in bins_res:
-            value = result[samples.index(r)][samples.index(b)]
-            if value == "nan":
-                line.append(-10)
+    bins_ratio = {}
+    bins_compo = {}
+    # print(samples)
+    for b in query_index.keys():
+        bin_lenght = 0
+        bin_ratio, bin_compo = {}, {}
+        for key in list(ref_index.keys()) + ["Unknow", "Conflicts"]:
+                bin_compo[key] = 0
+                bin_ratio[key] = 0
+        for q in query_index[b]:
+            qid, lenght = q
+            bin_lenght += lenght
+            qid_dist = {}
+            for r in ref_index.keys():
+                values = []
+                for rid in ref_index[r]:
+                    value = result[samples.index(qid)][samples.index(rid)]
+                    if value == 'nan':
+                        values.append(100)
+                    else:
+                        values.append(float(value))
+                # print(sum(values)/len(values),"\t\t", values)
+                qid_dist[r] = sum(values)/len(values)
+            # print(qid_dist)
+            min_value = min(qid_dist.values())
+            key = []
+            if min_value != 100:
+                for k in qid_dist.keys():
+                    if qid_dist[k] == min_value:
+                        key.append(k)
+                if len(key) == 1:
+                    key = key[0]
+                else:
+                    key = "Conflicts"
             else:
-                maxi = max(maxi, float(value))
-                line.append(float(value))
-        matrix.append(line)
-    outvalue = maxi * 1.001
-    for x in range(0,len(matrix)):
-        for y in range(0,len(matrix[x])):
-            if matrix[x][y] == -10:
-                matrix[x][y] = 1
-            else:
-                matrix[x][y] = matrix[x][y]/outvalue
-    trace = Heatmap(z=matrix, x=[f"bin_{i}" for i in bins_res], y=ref_res, colorscale=[[0, "#33BF00"], [maxi/outvalue, "#FFFFFF"], [1,"#8c00bf"]])
-    data = [trace]
-    layout = go.Layout(
-        title=f"andi on {name} set."
-    )
-    fig = go.Figure(data, layout)
-    plot(fig)
-    # return(samples, result)
-
-
-# def finch_rs(test_path, setname):
-#     bins = os.listdir(test_path)
-#     bins_path = [f"{test_path}/{i}" for i in bins]
-#     finch = software_exists("finch")
-#     f_folder = "samples/finch_temp"
-#     os.makedirs(f_folder, exist_ok=True)
-#     #refs = [f"samples/pur_sketch/{i}" for i in os.listdir("samples/pur_sketch")]
-#     refs = ["samples/pur_sketch/all.sk"]
-#     bins_ratio = {}
-#     for b in bins_path:
-#         contigs = {}
-#         total_len = 0
-#         bin_name = bins[bins_path.index(b)]
-#         for file in os.listdir(f_folder):
-#             os.remove(f"{f_folder}/{file}")
-#         fasta = SeqIO.parse(b, "fasta")
-#         contig_name = []
-#         for record in fasta:
-#             # print(record.id)
-#             SeqIO.write(record, f"{f_folder}/{record.id}", "fasta")
-#             contigs[record.id] = {"len" : len(str(record.seq))}
-#             total_len += contigs[record.id]["len"]
-#             contig_name.append(record.id)
-#         seqs = [f"{f_folder}/{i}" for i in os.listdir(f_folder)]
-#         args = [finch, "sketch"] + seqs + ["-N","-o", f"{f_folder}/{bin_name[:-3]}.sk"]
-#         subprocess.run(args)
-#         args = [finch, "dist"] + refs + [f"{f_folder}/{bin_name[:-3]}.sk"]
-#         for contig in contig_name:
-#             os.remove(f"{f_folder}/{contig}")
-#         f_out = subprocess.run(args, capture_output=True)
-#         print(f_out.stdout, f_out.stderr)
-#         stdout = f_out.stdout.decode()
-#         data = json.loads(stdout)
-#         for d in data:
-#             # print(d["query"])
-#             # print(contigs[d["query"]])
-#             if "ref" in contigs[d["query"]].keys():
-#                 if d["jaccard"] < contigs[d["query"]]["jaccard"]:
-#                     contigs[d["query"]]["ref"] = d["reference"]
-#                     contigs[d["query"]]["jaccard"] = d["jaccard"]
-#             else:
-#                 contigs[d["query"]]["ref"] = d["reference"]
-#                 contigs[d["query"]]["jaccard"] = d["jaccard"]
-#         species = {}
-#         for contig in contigs.keys():
-#             # print(contig, contigs[contig])
-#             if "ref" in contigs[contig].keys():
-#                 if contigs[contig]["ref"] in species.keys():
-#                     species[contigs[contig]["ref"]] += contigs[contig]["len"]/total_len
-#                 else:
-#                     species[contigs[contig]["ref"]] = contigs[contig]["len"]/total_len
-#             else:
-#                 if "unknown" in species.keys():
-#                     species["unknown"] += contigs[contig]["len"]/total_len
-#                 else:
-#                     species["unknown"] = contigs[contig]["len"]/total_len
-#         bins_ratio[bin_name[:-3]] = species
-#     return bins_ratio
+                key = "Unknow"
+            bin_compo[key] += lenght
+            bin_ratio[key] += 1
+        bin_ratio = {}
+        for k in bin_compo.keys():
+            bin_ratio[k] = bin_compo[k]/bin_lenght
+        # print("="*20)
+        # print(b, bin_ratio)
+        # input("step")
+        # print("="*20,"\n"*2)
+        bins_ratio[b] = bin_ratio
+        bins_compo[b] = bin_compo
+    bin_ratio = {}
+    for key in list(ref_index.keys()) + ["Unknow", "Conflicts"]:
+                bin_ratio[key] = 0
+    bins_ratio['total'] = bin_ratio
+    total_contig_length = 0
+    for b in bins_compo.keys():
+        for k in bins_compo[b].keys():
+            total_contig_length += bins_compo[b][k]
+            bins_ratio["total"][k] += bins_compo[b][k]
+    for key in bins_ratio["total"].keys():
+        bins_ratio["total"][key] = bins_ratio["total"][key]/total_contig_length
+    # print(bins_ratio)
+    graph1 = draw(bins_compo, f"Andi2 composition of each organisme on {name}.")
+    graph2 = draw(bins_ratio, f"Andi2 ratio of each organismes on {name}.")
+    with open("graphs.html", "a") as html:
+        html.writelines(graph1)
+        html.write("</br>")
+        html.writelines(graph2)
+        html.write("</br></hr>")
 
 
 def tests(test_path, ref_path, setname):
@@ -248,22 +238,22 @@ def tests(test_path, ref_path, setname):
     bins = os.listdir(test_path)
     bins_path = [f"{test_path}/{i}" for i in bins]
     bin_ratio = {}
-    for file in os.listdir("samples/prot_map"):
-            os.remove(f"samples/prot_map/{file}")
-    for file in os.listdir("samples/diamond_db"):
-            os.remove(f"samples/diamond_db/{file}")
-    for b in bins_path:
-        bin_name = bins[bins_path.index(b)]
-        print(f"metrics on {bin_name} into {setname}.")
-        prodigal(b, bin_name[:-3], output_dir="samples/prot_map")
-        d_db_name = f"samples/diamond_db/{bins[bins_path.index(b)][:-3]}"
-        d_db_src = f"samples/prot_map/{bins[bins_path.index(b)][:-3]}.faa"
-        diamond_db(d_db_name, d_db_src)
-        bin_ratio[bin_name] = blastx(db=f"samples/diamond_db/{bin_name[: -3]}", query=REF_path)
-    draw(bin_ratio, setname)
+    # for file in os.listdir("samples/prot_map"):
+    #         os.remove(f"samples/prot_map/{file}")
+    # for file in os.listdir("samples/diamond_db"):
+    #         os.remove(f"samples/diamond_db/{file}")
+    # for b in bins_path:
+    #     bin_name = bins[bins_path.index(b)]
+    #     print(f"metrics on {bin_name} into {setname}.")
+    #     prodigal(b, bin_name[:-3], output_dir="samples/prot_map")
+    #     d_db_name = f"samples/diamond_db/{bins[bins_path.index(b)][:-3]}"
+    #     d_db_src = f"samples/prot_map/{bins[bins_path.index(b)][:-3]}.faa"
+    #     diamond_db(d_db_name, d_db_src)
+    #     bin_ratio[bin_name] = blastx(db=f"samples/diamond_db/{bin_name[: -3]}", query=REF_path)
+    # draw(bin_ratio, setname)
     # bin_ratio = finch_rs(test_path, setname)
     # draw(bin_ratio, f"{setname} with finch-rs")
-    m_andi(PUR_SET, test_path, setname)
+    m_andi2(PUR_SET, test_path, setname)
 
 os.makedirs("metrics", exist_ok=True)
 path = [KM_clust, META_path, CONC_path, TNF_HCLUST, PUR_SET]
