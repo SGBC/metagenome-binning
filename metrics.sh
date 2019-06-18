@@ -1,7 +1,7 @@
 #! /usr/bin/env bash
 
 #$ -N binning_metrics
-#$ -M antoine.druart@std.heh.be
+#$ -M antoine.druart@slu.se
 #$ -m seab
 #$ -cwd   #Use the directory you're running from
 #$ -l h_rt=4:00:0,h_vmem=2G   #Setting running time in hours:min:sec and the memory required for the job
