@@ -42,8 +42,10 @@ def software_exists(software_name):
 
 def blastx(db, query):
     diamond = software_exists("diamond")
-    # args = [diamond, "blastx", "-d", db, "-q", query, "-f", "6", "qseqid", "positive"]
-    args = [diamond, "blastx", "-d", db, "-q", query, "-e", "0.0000000001", "-f", "6", "qseqid", "positive"]
+    # args = [diamond, "blastx", "-d", db, "-q", query,
+    #         "-f", "6", "qseqid", "positive"]
+    args = [diamond, "blastx", "-d", db, "-q", query,
+            "-e", "0.0000000001", "-f", "6", "qseqid", "positive"]
     output = subprocess.run(args, capture_output=True)
     out = output.stdout
     out = out.decode()
@@ -158,7 +160,6 @@ def m_andi2(ref_path, bins_path, name):
                 bin_record.append((sid, lenght))
             query_index[query[query_path.index(q)]] = bin_record
     args = [andi] + refs + query_path + ["2> /dev/null"]
-    # print(args)
     andi_out = subprocess.run(args, capture_output=True)
     andi_out = andi_out.stdout.decode('ascii')
     andi_txt = [i.split(" ") for i in andi_out.split("\n")][1:-1]
@@ -167,7 +168,6 @@ def m_andi2(ref_path, bins_path, name):
     result = [[i for i in a if i != ""] for a in result]
     bins_ratio = {}
     bins_compo = {}
-    # print(samples)
     for b in query_index.keys():
         bin_lenght = 0
         bin_ratio, bin_compo = {}, {}
@@ -186,9 +186,7 @@ def m_andi2(ref_path, bins_path, name):
                         values.append(100)
                     else:
                         values.append(float(value))
-                # print(sum(values)/len(values),"\t\t", values)
                 qid_dist[r] = sum(values)/len(values)
-            # print(qid_dist)
             min_value = min(qid_dist.values())
             key = []
             if min_value != 100:
@@ -206,15 +204,11 @@ def m_andi2(ref_path, bins_path, name):
         bin_ratio = {}
         for k in bin_compo.keys():
             bin_ratio[k] = bin_compo[k]/bin_lenght
-        # print("="*20)
-        # print(b, bin_ratio)
-        # input("step")
-        # print("="*20,"\n"*2)
         bins_ratio[b] = bin_ratio
         bins_compo[b] = bin_compo
     bin_ratio = {}
     for key in list(ref_index.keys()) + ["Unknow", "Conflicts"]:
-                bin_ratio[key] = 0
+        bin_ratio[key] = 0
     bins_ratio['total'] = bin_ratio
     total_contig_length = 0
     for b in bins_compo.keys():
@@ -223,9 +217,8 @@ def m_andi2(ref_path, bins_path, name):
             bins_ratio["total"][k] += bins_compo[b][k]
     for key in bins_ratio["total"].keys():
         bins_ratio["total"][key] = bins_ratio["total"][key]/total_contig_length
-    # print(bins_ratio)
-    graph1 = draw(bins_compo, f"Andi2 composition of each organisme on {name}.")
-    graph2 = draw(bins_ratio, f"Andi2 ratio of each organismes on {name}.")
+    graph1 = draw(bins_compo, f"Andi composition of each organisme on {name}.")
+    graph2 = draw(bins_ratio, f"Andi ratio of each organismes on {name}.")
     with open("graphs.html", "a") as html:
         html.writelines(graph1)
         html.write("</br>")
@@ -235,9 +228,9 @@ def m_andi2(ref_path, bins_path, name):
 
 def tests(test_path, ref_path, setname):
     print(f"Run metrics on {setname} bins")
-    bins = os.listdir(test_path)
-    bins_path = [f"{test_path}/{i}" for i in bins]
-    bin_ratio = {}
+    # bins = os.listdir(test_path)
+    # bins_path = [f"{test_path}/{i}" for i in bins]
+    # bin_ratio = {}
     # for file in os.listdir("samples/prot_map"):
     #         os.remove(f"samples/prot_map/{file}")
     # for file in os.listdir("samples/diamond_db"):
@@ -249,7 +242,9 @@ def tests(test_path, ref_path, setname):
     #     d_db_name = f"samples/diamond_db/{bins[bins_path.index(b)][:-3]}"
     #     d_db_src = f"samples/prot_map/{bins[bins_path.index(b)][:-3]}.faa"
     #     diamond_db(d_db_name, d_db_src)
-    #     bin_ratio[bin_name] = blastx(db=f"samples/diamond_db/{bin_name[: -3]}", query=REF_path)
+    #     bin_ratio[bin_name] = blastx(
+    #       db=f"samples/diamond_db/{bin_name[: -3]}",
+    #       query=REF_path)
     # draw(bin_ratio, setname)
     # bin_ratio = finch_rs(test_path, setname)
     # draw(bin_ratio, f"{setname} with finch-rs")
@@ -257,7 +252,8 @@ def tests(test_path, ref_path, setname):
 
 os.makedirs("metrics", exist_ok=True)
 path = [KM_clust, META_path, CONC_path, TNF_HCLUST, PUR_SET]
-metaname = ["Kmeans_clust", "metabat", "concoct", "4NF_hclust", "Originals chromosomes"]
+metaname = ["Kmeans_clust", "metabat", "concoct",
+            "4NF_hclust", "Originals chromosomes"]
 for p, m in zip(path, metaname):
     tests(p, REF_path, m)
 # tests(path[4], REF_path, metaname[4])

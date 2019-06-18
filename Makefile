@@ -23,7 +23,7 @@ metrics:
 	@echo -e '$(yellow)! Metrics are not yet fully implemented$(blk)'
 	@cat samples/metabat/time
 	@cat samples/concoct/time
-	@scripts/metrics.py
+	@bash metrics.sh
 
 # samples/diamond_db/*: samples/prot_map/*
 # 	scripts/diamond_db.py
