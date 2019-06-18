@@ -109,7 +109,7 @@ def prodigal(genome, output_prefix="bin", trans_table=11, output_dir=None):
         f.write(gff.stdout)
 
 
-def draw(data, setname):
+def draw(data, setname, force_range=False):
     bins_name = list(data.keys())
     bins_name.sort()
     bins_sect = []
@@ -131,10 +131,17 @@ def draw(data, setname):
             name=sect
         )
         values.append(trace)
-    layout = go.Layout(
-        barmode='stack',
-        title=f"{setname} bins"
-    )
+    if force_range:
+        layout = go.Layout(
+            barmode='stack',
+            title=f"{setname} bins",
+            yaxis=dict(range=[0,100])
+        )
+    else:
+        layout = go.Layout(
+            barmode='stack',
+            title=f"{setname} bins"
+        )
     fig = go.Figure(data=values, layout=layout)
     # plot(fig)
     return plot(fig, include_plotlyjs=True, output_type='div')
@@ -218,7 +225,7 @@ def m_andi2(ref_path, bins_path, name):
     for key in bins_ratio["total"].keys():
         bins_ratio["total"][key] = bins_ratio["total"][key]/total_contig_length
     graph1 = draw(bins_compo, f"Andi composition of each organisme on {name}.")
-    graph2 = draw(bins_ratio, f"Andi ratio of each organismes on {name}.")
+    graph2 = draw(bins_ratio, f"Andi ratio of each organismes on {name}.", True)
     with open("graphs.html", "a") as html:
         html.writelines(graph1)
         html.write("</br>")
