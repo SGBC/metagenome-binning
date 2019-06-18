@@ -135,7 +135,7 @@ def draw(data, setname, force_range=False):
         layout = go.Layout(
             barmode='stack',
             title=f"{setname} bins",
-            yaxis=dict(range=[0,100])
+            yaxis=dict(range=[0, 100])
         )
     else:
         layout = go.Layout(
@@ -175,12 +175,13 @@ def m_andi2(ref_path, bins_path, name):
     result = [[i for i in a if i != ""] for a in result]
     bins_ratio = {}
     bins_compo = {}
+    bins_contigs = {}
     for b in query_index.keys():
         bin_lenght = 0
-        bin_ratio, bin_compo = {}, {}
+        bin_contig, bin_compo, bin_ratio = {}, {}, {}
         for key in list(ref_index.keys()) + ["Unknow", "Conflicts"]:
-                bin_compo[key] = 0
-                bin_ratio[key] = 0
+            bin_compo[key] = 0
+            bin_contig[key] = 0
         for q in query_index[b]:
             qid, lenght = q
             bin_lenght += lenght
@@ -207,13 +208,12 @@ def m_andi2(ref_path, bins_path, name):
             else:
                 key = "Unknow"
             bin_compo[key] += lenght
-            bin_ratio[key] += 1
-        bin_ratio = {}
+            bin_contig[key] += 1
         for k in bin_compo.keys():
             bin_ratio[k] = bin_compo[k]/bin_lenght
         bins_ratio[b] = bin_ratio
         bins_compo[b] = bin_compo
-    bin_ratio = {}
+        bins_contigs[b] = bin_contig
     for key in list(ref_index.keys()) + ["Unknow", "Conflicts"]:
         bin_ratio[key] = 0
     bins_ratio['total'] = bin_ratio
@@ -222,8 +222,10 @@ def m_andi2(ref_path, bins_path, name):
         for k in bins_compo[b].keys():
             total_contig_length += bins_compo[b][k]
             bins_ratio["total"][k] += bins_compo[b][k]
+    bins_compo["total"] = dict(bins_ratio["total"])
     for key in bins_ratio["total"].keys():
         bins_ratio["total"][key] = bins_ratio["total"][key]/total_contig_length
+    precision_recall(bins_ratio, bins_compo)
     graph1 = draw(bins_compo, f"Andi composition of each organisme on {name}.")
     graph2 = draw(bins_ratio, f"Andi ratio of each organismes on {name}.", True)
     with open("graphs.html", "a") as html:
@@ -231,6 +233,39 @@ def m_andi2(ref_path, bins_path, name):
         html.write("</br>")
         html.writelines(graph2)
         html.write("</br></hr>")
+
+
+def precision_recall(ratio, compos):
+    G_tp = 0  # Global_true_positive number
+    G_fp = 0  # Gloval_false_positive number
+    precisions = []
+    recalls = []
+    for b in ratio.keys():
+        if b != "total":
+            B_tp = 0
+            B_fp = 0
+            max_ratio = max(ratio[b].values())
+            key = ""
+            for k in ratio[b].keys():
+                if ratio[b][k] == max_ratio:
+                    key = k
+                    break
+            for k in compos[b].keys():
+                if k == key:
+                    B_tp += compos[b][k]
+                else:
+                    B_fp += compos[b][k]
+            total = compos["total"][key]
+            print(f"Bin {b}\tprecision: {round((((B_tp)/(B_tp+B_fp))*100),2)}%")
+            print(f"Bin {b}\trecall: {round((B_tp/total)*100,2)}%")
+            precisions.append(((B_tp)/(B_tp+B_fp))*100)
+            recalls.append((B_tp/(compos["total"][key])*100))
+            G_tp += B_tp
+            G_fp += B_fp
+    print(f"Methode precision: {round((((G_tp)/(G_tp+G_fp))*100),2)}%")
+    print(f"mean precision: {round(sum(precisions)/len(precisions),2)}%")
+    print(f"mean recall: {round(sum(recalls)/len(recalls),2)}%")
+
 
 
 def tests(test_path, ref_path, setname):
@@ -261,6 +296,6 @@ os.makedirs("metrics", exist_ok=True)
 path = [KM_clust, META_path, CONC_path, TNF_HCLUST, PUR_SET]
 metaname = ["Kmeans_clust", "metabat", "concoct",
             "4NF_hclust", "Originals chromosomes"]
-for p, m in zip(path, metaname):
-    tests(p, REF_path, m)
-# tests(path[4], REF_path, metaname[4])
+# for p, m in zip(path, metaname):
+#     tests(p, REF_path, m)
+tests(path[4], REF_path, metaname[4])
