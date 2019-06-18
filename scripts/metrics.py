@@ -240,6 +240,7 @@ def precision_recall(ratio, compos):
     G_fp = 0  # Gloval_false_positive number
     precisions = []
     recalls = []
+    to_write = []
     for b in ratio.keys():
         if b != "total":
             B_tp = 0
@@ -256,20 +257,29 @@ def precision_recall(ratio, compos):
                 else:
                     B_fp += compos[b][k]
             total = compos["total"][key]
+            to_write.append(f"Bin {b}\tprecision: {round((((B_tp)/(B_tp+B_fp))*100),2)}%")
+            to_write.append(f"Bin {b}\trecall: {round((B_tp/total)*100,2)}%")
             print(f"Bin {b}\tprecision: {round((((B_tp)/(B_tp+B_fp))*100),2)}%")
             print(f"Bin {b}\trecall: {round((B_tp/total)*100,2)}%")
             precisions.append(((B_tp)/(B_tp+B_fp))*100)
             recalls.append((B_tp/(compos["total"][key])*100))
             G_tp += B_tp
             G_fp += B_fp
+    to_write.append(f"Methode precision: {round((((G_tp)/(G_tp+G_fp))*100),2)}%")
+    to_write.append(f"mean precision: {round(sum(precisions)/len(precisions),2)}%")
+    to_write.append(f"mean recall: {round(sum(recalls)/len(recalls),2)}%")
     print(f"Methode precision: {round((((G_tp)/(G_tp+G_fp))*100),2)}%")
     print(f"mean precision: {round(sum(precisions)/len(precisions),2)}%")
     print(f"mean recall: {round(sum(recalls)/len(recalls),2)}%")
-
+    with open("logs.log",'a') as logs:
+        for i in to_write:
+            logs.write(i+"\n")
 
 
 def tests(test_path, ref_path, setname):
     print(f"Run metrics on {setname} bins")
+    with open("logs.log",'a') as logs:
+        logs.write(f"Run metrics on {setname} bins\n")
     # bins = os.listdir(test_path)
     # bins_path = [f"{test_path}/{i}" for i in bins]
     # bin_ratio = {}
