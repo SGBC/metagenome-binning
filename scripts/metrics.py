@@ -296,6 +296,6 @@ os.makedirs("metrics", exist_ok=True)
 path = [KM_clust, META_path, CONC_path, TNF_HCLUST, PUR_SET]
 metaname = ["Kmeans_clust", "metabat", "concoct",
             "4NF_hclust", "Originals chromosomes"]
-# for p, m in zip(path, metaname):
-#     tests(p, REF_path, m)
-tests(path[4], REF_path, metaname[4])
+for p, m in zip(path, metaname):
+    tests(p, REF_path, m)
+# tests(path[4], REF_path, metaname[4])
