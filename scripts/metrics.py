@@ -12,15 +12,6 @@ from plotly.graph_objs import Heatmap
 import plotly.graph_objs as go
 from Bio import SeqIO
 
-REF_FOLDER = "samples/chromosomes/"
-REF_path = "samples/chromosomes/all_chromo.fna"
-META_path = "samples/metabat/fasta_bins"
-CONC_path = "samples/concoct/fasta_bins"
-TNF_HCLUST = "samples/4NF_hclust_bins"
-PNF_HCLUST = "samples/5NF_hclust_bins"
-KM_clust = "samples/kmeans_clust"
-PUR_SET = "samples/pur_set"
-
 
 class SoftwareNotFoundError(Exception):
     """Exception to raise when a software is not in the path
@@ -265,11 +256,9 @@ def precision_recall(ratio, compos):
             # total = compos["total"][key]
             bins_pre_rec[b]["precision"] = ((B_tp)/(B_tp+B_fp))
             bins_pre_rec[b]["recall"] = (B_tp/compos["total"][key])
-            to_write.append(f"Bin {b}\tprecision: {round(
-                (bins_pre_rec[b]['precision']*100), 2)} %")
+            to_write.append(f"Bin {b}\tprecision: {round((bins_pre_rec[b]['precision']*100), 2)} %")
             print(to_write[-1])
-            to_write.append(f"Bin {b}\trecall: {round(
-                bins_pre_rec[b]['recall']*100, 2)} %")
+            to_write.append(f"Bin {b}\trecall: {round(bins_pre_rec[b]['recall']*100, 2)} %")
             print(to_write[-1])
             precisions.append(bins_pre_rec[b]["precision"])
             recalls.append(bins_pre_rec[b]["recall"])
@@ -279,12 +268,10 @@ def precision_recall(ratio, compos):
     #   (((G_tp)/(G_tp+G_fp))*100),2)} %")
     bins_pre_rec["Mean"] = {}
     bins_pre_rec["Mean"]["precision"] = sum(precisions)/len(precisions)
-    to_write.append(f"Mean precision: {round(
-        bins_pre_rec['Mean']['precision'], 2)} %")
+    to_write.append(f"Mean precision: {round(bins_pre_rec['Mean']['precision'], 2)} %")
     print(to_write[-1])
     bins_pre_rec["Mean"]["recall"] = sum(recalls)/len(recalls)
-    to_write.append(f"Mean recall: {round(
-        bins_pre_rec['Mean']['recall'], 2)} %")
+    to_write.append(f"Mean recall: {round(bins_pre_rec['Mean']['recall'], 2)} %")
     print(to_write[-1])
     with open("logs.log", 'a') as logs:
         for i in to_write:
@@ -318,10 +305,21 @@ def tests(test_path, ref_path, setname):
     # draw(bin_ratio, f"{setname} with finch-rs")
     m_andi2(PUR_SET, test_path, setname)
 
+
+REF_FOLDER = "samples/chromosomes/"
+REF_path = "samples/chromosomes/all_chromo.fna"
+META_path = "samples/metabat/fasta_bins"
+CONC_path = "samples/concoct/fasta_bins"
+TNF_HCLUST = "samples/4NF_hclust_bins"
+PNF_HCLUST = "samples/5NF_hclust_bins"
+KM_clust = "samples/kmeans_clust"
+PUR_SET = "samples/pur_set"
+
+
 os.makedirs("metrics", exist_ok=True)
 path = [KM_clust, META_path, CONC_path, TNF_HCLUST, PUR_SET]
 metaname = ["Kmeans_clust", "metabat", "concoct",
             "4NF_hclust", "Originals chromosomes"]
-# for p, m in zip(path, metaname):
-#     tests(p, REF_path, m)
-tests(path[4], REF_path, metaname[4])
+for p, m in zip(path, metaname):
+    tests(p, REF_path, m)
+# tests(path[4], REF_path, metaname[4])
