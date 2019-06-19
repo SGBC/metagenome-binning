@@ -109,7 +109,7 @@ def prodigal(genome, output_prefix="bin", trans_table=11, output_dir=None):
         f.write(gff.stdout)
 
 
-def draw(data, setname, force_range=False):
+def draw(data, setname, force_range=False, type='stack'):
     bins_name = list(data.keys())
     bins_name.sort()
     bins_sect = []
@@ -133,7 +133,7 @@ def draw(data, setname, force_range=False):
         values.append(trace)
     if force_range:
         layout = go.Layout(
-            barmode='stack',
+            barmode=type,
             title=f"{setname} bins",
             yaxis=dict(range=[0, 100])
         )
@@ -194,7 +194,7 @@ def m_andi2(ref_path, bins_path, name):
                         values.append(100)
                     else:
                         values.append(float(value))
-                qid_dist[r] = sum(values)/len(values)
+                qid_dist[r] = value  # sum(values)/len(values)
             min_value = min(qid_dist.values())
             key = []
             if min_value != 100:
@@ -225,14 +225,18 @@ def m_andi2(ref_path, bins_path, name):
     bins_compo["total"] = dict(bins_ratio["total"])
     for key in bins_ratio["total"].keys():
         bins_ratio["total"][key] = bins_ratio["total"][key]/total_contig_length
-    precision_recall(bins_ratio, bins_compo)
-    graph1 = draw(bins_compo, f"Andi composition of each organisme on {name}.")
-    graph2 = draw(bins_ratio, f"Andi ratio of each organismes on {name}.", True)
+    graph1 = draw(bins_compo, f"Andi composition of each organisme on {name}")
+    graph2 = draw(bins_ratio, f"Andi ratio of each organismes on {name}", True)
+    graph3 = draw(precision_recall(bins_ratio, bins_compo),
+                  f"Andi precision/recall of {name}", True, 'group')
     with open("graphs.html", "a") as html:
+        html.write("<div></br>")
         html.writelines(graph1)
         html.write("</br>")
         html.writelines(graph2)
-        html.write("</br></hr>")
+        html.write("</br>")
+        html.writelines(graph3)
+        html.write("</br></hr></div>")
 
 
 def precision_recall(ratio, compos):
@@ -241,8 +245,10 @@ def precision_recall(ratio, compos):
     precisions = []
     recalls = []
     to_write = []
+    bins_pre_rec = {}
     for b in ratio.keys():
         if b != "total":
+            bins_pre_rec[b] = {}
             B_tp = 0
             B_fp = 0
             max_ratio = max(ratio[b].values())
@@ -256,29 +262,39 @@ def precision_recall(ratio, compos):
                     B_tp += compos[b][k]
                 else:
                     B_fp += compos[b][k]
-            total = compos["total"][key]
-            to_write.append(f"Bin {b}\tprecision: {round((((B_tp)/(B_tp+B_fp))*100),2)}%")
-            to_write.append(f"Bin {b}\trecall: {round((B_tp/total)*100,2)}%")
-            print(f"Bin {b}\tprecision: {round((((B_tp)/(B_tp+B_fp))*100),2)}%")
-            print(f"Bin {b}\trecall: {round((B_tp/total)*100,2)}%")
-            precisions.append(((B_tp)/(B_tp+B_fp))*100)
-            recalls.append((B_tp/(compos["total"][key])*100))
+            # total = compos["total"][key]
+            bins_pre_rec[b]["precision"] = ((B_tp)/(B_tp+B_fp))
+            bins_pre_rec[b]["recall"] = (B_tp/compos["total"][key])
+            to_write.append(f"Bin {b}\tprecision: {round(
+                (bins_pre_rec[b]['precision']*100), 2)} %")
+            print(to_write[-1])
+            to_write.append(f"Bin {b}\trecall: {round(
+                bins_pre_rec[b]['recall']*100, 2)} %")
+            print(to_write[-1])
+            precisions.append(bins_pre_rec[b]["precision"])
+            recalls.append(bins_pre_rec[b]["recall"])
             G_tp += B_tp
             G_fp += B_fp
-    to_write.append(f"Methode precision: {round((((G_tp)/(G_tp+G_fp))*100),2)}%")
-    to_write.append(f"mean precision: {round(sum(precisions)/len(precisions),2)}%")
-    to_write.append(f"mean recall: {round(sum(recalls)/len(recalls),2)}%")
-    print(f"Methode precision: {round((((G_tp)/(G_tp+G_fp))*100),2)}%")
-    print(f"mean precision: {round(sum(precisions)/len(precisions),2)}%")
-    print(f"mean recall: {round(sum(recalls)/len(recalls),2)}%")
-    with open("logs.log",'a') as logs:
+    # to_write.append(f"Methode precision: {round(
+    #   (((G_tp)/(G_tp+G_fp))*100),2)} %")
+    bins_pre_rec["Mean"] = {}
+    bins_pre_rec["Mean"]["precision"] = sum(precisions)/len(precisions)
+    to_write.append(f"Mean precision: {round(
+        bins_pre_rec['Mean']['precision'], 2)} %")
+    print(to_write[-1])
+    bins_pre_rec["Mean"]["recall"] = sum(recalls)/len(recalls)
+    to_write.append(f"Mean recall: {round(
+        bins_pre_rec['Mean']['recall'], 2)} %")
+    print(to_write[-1])
+    with open("logs.log", 'a') as logs:
         for i in to_write:
             logs.write(i+"\n")
+    return bins_pre_rec
 
 
 def tests(test_path, ref_path, setname):
     print(f"Run metrics on {setname} bins")
-    with open("logs.log",'a') as logs:
+    with open("logs.log", 'a') as logs:
         logs.write(f"Run metrics on {setname} bins\n")
     # bins = os.listdir(test_path)
     # bins_path = [f"{test_path}/{i}" for i in bins]
@@ -306,6 +322,6 @@ os.makedirs("metrics", exist_ok=True)
 path = [KM_clust, META_path, CONC_path, TNF_HCLUST, PUR_SET]
 metaname = ["Kmeans_clust", "metabat", "concoct",
             "4NF_hclust", "Originals chromosomes"]
-for p, m in zip(path, metaname):
-    tests(p, REF_path, m)
-# tests(path[4], REF_path, metaname[4])
+# for p, m in zip(path, metaname):
+#     tests(p, REF_path, m)
+tests(path[4], REF_path, metaname[4])
