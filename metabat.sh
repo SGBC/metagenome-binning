@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-#$ -N ISS reads binning
+#$ -N metabat-binning
 #$ -M antoine.druart@slu.se
 #$ -m seab
 #$ -cwd   #Use the directory you're running from
