@@ -12,10 +12,7 @@ info:
 	@echo -e '"make server"\tto import all necessary to run the makefile on the HGEN server'
 	@echo -e '"make all" \tto generate contigs and bins \t$(yellow)(not yet fully implemented)$(blk)'
 
-samples: dl_samples extract sort_entry reads contigs
-
-server:
-	bash scripts/modules_load
+samples: dl_samples extract reads contigs
 
 bins: metabat concoct
 
@@ -65,61 +62,21 @@ extract:
 	@mv samples/*.fna samples/complete_genomes
 	@echo It looks clean :D
 
-sort_entry:
-	@echo -e "$(lblue)# Running chroplasmitor (sorts entries)$(blk)"
-	@scripts/chroplasmitor.py -g samples/complete_genomes/*.fna -o samples
-
 reads:
 	@echo -e "$(lblue)# Generating reads$(blk)"
-	@mkdir -p samples/reads
-	@iss generate --genomes samples/chromosomes/*.fna --abundance_file scripts/abundance_file --model hiseq --output samples/reads/reads --n_reads 8M --cpus `grep -c ^processor /proc/cpuinfo`
-
+	@qsub reads.sh
 contigs:
 	@echo -e "$(lblue)# Generating contigs$(blk)"
-	@megahit -1 samples/reads/reads_R1.fastq -2 samples/reads/reads_R2.fastq -o samples/contigs/
+	@qsub contigs.sh
 
 samples/mapping/reads.bam: samples/contigs/final.contigs.fa
 	@echo -e "$(lblue)# Mapping reads$(blk)"
-	@mkdir -p samples/mapping
-	@echo -e "$(lblue)# Run bowtie2-build$(blk)"
-	@bowtie2-build samples/contigs/final.contigs.fa samples/mapping/bt2_index_base
-	@echo -e "$(lblue)# Run bowtie2 and samtools view$(blk)"
-	@bowtie2 -x samples/mapping/bt2_index_base -1 samples/reads/reads_R1.fastq -2 samples/reads/reads_R2.fastq | samtools view -bS -o samples/mapping/reads_to_sort.bam
-	@echo -e "$(lblue)# Run samtools sort$(blk)"
-	@samtools sort samples/mapping/reads_to_sort.bam -o samples/mapping/reads.bam
-	@echo -e "$(lblue)# Run samtools index$(blk)"
-	@samtools index samples/mapping/reads.bam
+	@qsub mapping.sh
 
 metabat: samples/mapping/reads.bam 
 	@echo -e "$(yellow)=== Metabat ===$(blk)"
-	@mkdir -p samples/metabat
-	@echo "=== Time running Metabat ===" > samples/metabat/time
-	@echo Start @\t `date` >> samples/metabat/time
-	@echo -e "$(lblue)# Run metabat$(blk)"
-	@runMetaBat.sh -m 1500 samples/contigs/final.contigs.fa samples/mapping/reads.bam
-	@rm -rf samples/metabat/final.contigs.fa.metabat-bins1500
-	@mv final.contigs.fa.metabat-bins1500 samples/metabat/
-	@mv final.contigs.fa.depth.txt samples/metabat/
-	@mv final.contigs.fa.paired.txt samples/metabat/
-	@mv samples/metabat/final.contigs.fa.metabat-bins1500 samples/metabat/fasta_bins
-	@scripts/metabin_rename.py
-	@echo End @\t `date` >> samples/metabat/time
+	@qsub metabat.sh
 
 concoct: samples/mapping/reads.bam
 	@echo -e "$(yellow)=== Concoct ===$(blk)"
-	@mkdir -p samples/concoct
-	@echo -e "=== Time running Concoct ===" > samples/concoct/time
-	@echo Start @\t `date` >> samples/concoct/time
-	@echo -e "$(lblue)# Cut contigs in small part$(blk)"
-	@cut_up_fasta.py samples/contigs/final.contigs.fa  -c 10000 -o 0 --merge_last -b samples/concoct/contigs_10K.bed > samples/concoct/contigs_10K.fa
-	@echo -e "$(lblue)# Generate table of coverage depth$(blk)"
-	@concoct_coverage_table.py samples/concoct/contigs_10K.bed samples/mapping/reads.bam > samples/concoct/coverage_table.tsv
-	@echo -e "$(lblue)# Run concoct$(blk)"
-	@concoct --composition_file samples/concoct/contigs_10K.fa --coverage_file samples/concoct/coverage_table.tsv -b samples/concoct/output/
-	@echo -e "$(lblue)# Merge subcontigs clustering$(blk)"
-	@rm -rf samples/concoct/fasta_bins
-	@merge_cutup_clustering.py samples/concoct/output/clustering_gt1000.csv > samples/concoct/output/clustering_merged.csv
-	@mkdir samples/concoct/fasta_bins
-	@echo -e "$(lblue)# Extract Bins$(blk)"
-	@extract_fasta_bins.py samples/contigs/final.contigs.fa samples/concoct/output/clustering_merged.csv --output_path samples/concoct/fasta_bins
-	@echo End @\t `date` >> samples/concoct/time
+	@qsub concoct.sh
