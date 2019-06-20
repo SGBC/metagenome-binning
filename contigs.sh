@@ -13,4 +13,5 @@
 
 module load megahit
 
+rm -rf samples/contigs
 megahit -1 samples/reads/reads_R1.fastq -2 samples/reads/reads_R2.fastq -o samples/contigs/
