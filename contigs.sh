@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-#$ -N Megahit binning
+#$ -N Megahit-binning
 #$ -M antoine.druart@slu.se
 #$ -m seab
 #$ -cwd   #Use the directory you're running from
