@@ -15,7 +15,7 @@ module load biopython
 module load insilicoseq
 module load python/3.7.3
 
-./scripts/chroplasmitor.py -g samples/complete_genomes/*.fna -o samples
-./scripts/chromo_compiler.py
+scripts/chroplasmitor.py -g samples/complete_genomes/*.fna -o samples
+scripts/chromo_compiler.py
 mkdir -p samples/reads
 iss generate --genomes samples/chromosomes/all_chromo.fna --abundance_file scripts/abundance_file --model hiseq --output samples/reads/reads --n_reads 20M --cpus `grep -c ^processor /proc/cpuinfo`
