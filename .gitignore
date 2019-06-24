@@ -115,4 +115,4 @@ Pipfile.lock
 scripts/4NF_output
 metrics/
 temp-plot.html
-graphs*
+graph*

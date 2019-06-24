@@ -108,8 +108,6 @@ def make_index(files_paths):
                 bin_contigs[record.id] = {}
                 bin_contigs[record.id]['lenght'] = len(str(record.seq))
             query_index[os.path.basename(f)] = bin_contigs
-    # print("query index")
-    # print(query_index)
     return query_index
 
 
