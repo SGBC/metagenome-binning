@@ -398,6 +398,6 @@ ref_index = json.loads(open(ref_index).read())
 
 # print(ref_index)
 
-# for p, m in zip(path, metaname):
-#     tests(p, REF_path, DB_Path, ref_index, m)
-tests(path[4], REF_path, DB_Path, ref_index, metaname[4])
+for p, m in zip(path, metaname):
+    tests(p, REF_path, DB_Path, ref_index, m)
+# tests(path[4], REF_path, DB_Path, ref_index, metaname[4])
