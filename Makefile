@@ -7,9 +7,10 @@ lblue = \e[1m\e[1;36m
 info:
 	@echo -e '"make info" \tto show this message \t\t$(green)(implemented)$(blk)'
 	@echo -e '"make samples" \tto generate contigs \t\t$(green)(implemented)$(blk)'
+	@echo -e "include "make dl_samples", "make extract", "make reads", "make contigs"
 	@echo -e '"make bins" \tto generate bins \t\t$(green)(implemented)$(blk)'
+	@echo -e "include "make metabat", "make concoct"
 	@echo -e '"make metrics"\tto evaluate binning\t\t$(yellow)(not yet fully implemented)$(blk)'
-	@echo -e '"make server"\tto import all necessary to run the makefile on the HGEN server'
 	@echo -e '"make all" \tto generate contigs and bins \t$(yellow)(not yet fully implemented)$(blk)'
 
 samples: dl_samples extract reads contigs
