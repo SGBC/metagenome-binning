@@ -157,9 +157,10 @@ def diamond_data(bins_paths, db_paths, query_index):
             for b in query_index.keys():
                 for contig in query_index[b].keys():
                     db_name = os.path.basename(db)
+                    # print(db_name.split(".")[0])
                     if contig in genes_score.keys():
-                        if ".dmnd" in db_name:
-                            query_index[b][contig]["diamond"][db_name[:-5]] = genes_score[contig]
+                        if "." in db_name:
+                            query_index[b][contig]["diamond"][db_name.split(".")[0]] = genes_score[contig]
                         else:
                             query_index[b][contig]["diamond"][db_name] = genes_score[contig]
     for b in query_index.keys():
@@ -190,13 +191,13 @@ def compile_data(query_index):
     for b in bins_name:
         for contig in query_index[b].keys():
             sect = query_index[b][contig]["andi"]
-            if ".fna" in sect:
-                sect = sect[:-4]
+            if "." in sect:
+                sect = sect.split(".")[0]
             if sect not in bins_sect:
                 bins_sect.append(sect)
             sect = query_index[b][contig]["diamond"]
-            if ".fna" in sect:
-                sect = sect[:-4]
+            if "." in sect:
+                sect = sect.split(".")[0]
             if sect not in bins_sect:
                 bins_sect.append(sect)
     bins_compo = {}
@@ -233,6 +234,8 @@ def compile_data(query_index):
             bins_ratio[b][m] = {}
             for c in bins_compo[b][m].keys():
                 bins_ratio[b][m][c] = bins_compo[b][m][c]/b_len
+    print("bincompo\n", bins_compo)
+    print("binratio\n", bins_ratio)
     return (bins_compo, bins_ratio)
 
 
@@ -397,6 +400,6 @@ ref_index = json.loads(open(ref_index).read())
 
 # print(ref_index)
 
-for p, m in zip(path, metaname):
-    tests(p, REF_path, DB_Path, ref_index, m)
-# tests(path[4], REF_path, DB_Path, ref_index, metaname[4])
+# for p, m in zip(path, metaname):
+#     tests(p, REF_path, DB_Path, ref_index, m)
+tests(path[4], REF_path, DB_Path, ref_index, metaname[4])
