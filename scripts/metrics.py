@@ -14,7 +14,7 @@ from Bio import SeqIO
 
 
 test = False
-test = True    # comment this line to run completly the metrics module
+# test = True    # comment this line to run completly the metrics module
 
 class SoftwareNotFoundError(Exception):
     """Exception to raise when a software is not in the path
