@@ -13,6 +13,9 @@ import plotly.graph_objs as go
 from Bio import SeqIO
 
 
+test = False
+test = True    # comment this line to run completly the metrics module
+
 class SoftwareNotFoundError(Exception):
     """Exception to raise when a software is not in the path
     """
@@ -278,13 +281,10 @@ def tests(bins_paths, ref_paths, db_paths, ref_index, setname):
     query_index = diamond_data(bins_paths, db_paths, query_index)
     compo, ratio = compile_data(query_index)
     precision, recall = precision_recall(compo)
-    pre_rec_graph = draw_pre_rec(precision, recall, setname)
-    ratio_graph = draw_ratio(ratio, setname)
-    compo_graph = draw_compo(compo, setname)
-    with open("metrics_result.html", "a") as save:
-        save.writelines(pre_rec_graph)
-        save.writelines(compo_graph)
-        save.writelines(ratio_graph)
+    results = [draw_pre_rec(precision, recall, setname)]
+    results.append(draw_ratio(ratio, setname))
+    results.append(draw_compo(compo, setname))
+    return(results)
 
 
 def draw_compo(compo, setname):
@@ -389,15 +389,24 @@ DB_Path = [f"samples/diamond_db/{i}" for i in os.listdir("samples/diamond_db/")]
 
 
 os.makedirs("metrics", exist_ok=True)
-path = [KM_clust, META_path, CONC_path, TNF_HCLUST, PUR_SET, SMALL_SET]
-metaname = ["Kmeans_clust", "metabat", "concoct",
-            "4NF_hclust", "Originals chromosomes", "small set"]
+path = [PUR_SET, META_path, CONC_path, TNF_HCLUST, KM_clust]
+metaname = ["Originals chromosomes (test)", "metabat", "concoct",
+            "4NF_hclust", "Kmeans_clust"]
 
 ref_index = "samples/chromosomes/index_chromo"
 ref_index = json.loads(open(ref_index).read())
 
 # print(ref_index)
+to_write = []
+if test:
+    to_write += tests(path[0], REF_path, DB_Path, ref_index, metaname[0])
+else:
+    for p, m in zip(path, metaname):
+        to_write += tests(p, REF_path, DB_Path, ref_index, m)
 
-for p, m in zip(path, metaname):
-    tests(p, REF_path, DB_Path, ref_index, m)
-# tests(path[4], REF_path, DB_Path, ref_index, metaname[4])
+with open("metrics/results.html", "w") as save:
+    save.write("<html><body>")
+    for graph in to_write:
+        save.writelines(graph)
+        save.write("</br></hr>")
+    save.write("</body></html>")
