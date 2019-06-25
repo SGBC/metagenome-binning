@@ -283,8 +283,8 @@ def tests(bins_paths, ref_paths, db_paths, ref_index, setname):
     compo_graph = draw_compo(compo, setname)
     with open("metrics_result.html", "a") as save:
         save.writelines(pre_rec_graph)
-        save.writelines(ratio_graph)
         save.writelines(compo_graph)
+        save.writelines(ratio_graph)
 
 
 def draw_compo(compo, setname):
