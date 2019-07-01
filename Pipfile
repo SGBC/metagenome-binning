@@ -13,6 +13,7 @@ bio = "*"
 plotly = "*"
 pandas = "*"
 scikit-learn = "*"
+pysam = "*"
 
 [requires]
 python_version = "3.6"

@@ -16,4 +16,4 @@ module load python/3.7.3
 module load andi/0.12
 module load diamond
 
-./scripts/metrics.py
+./scripts/validation/metrics.py

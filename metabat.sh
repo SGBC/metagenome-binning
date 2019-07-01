@@ -15,8 +15,10 @@ module load metabat
 module load python/3.7.3
 
 runMetaBat.sh -m 1500 samples/contigs/final.contigs.fa samples/mapping/reads.bam
-mv final.contigs.fa.metabat-bins1500 samples/metabat/
-mv final.contigs.fa.depth.txt samples/metabat/
-mv final.contigs.fa.paired.txt samples/metabat/
-mv samples/metabat/final.contigs.fa.metabat-bins1500 samples/metabat/fasta_bins
-scripts/metabin_rename.py
+mkdirs results/metabat
+mv final.contigs.fa.metabat-bins1500 results/metabat/
+mv final.contigs.fa.depth.txt results/metabat/
+mv final.contigs.fa.paired.txt results/metabat/
+mv results/metabat/final.contigs.fa.metabat-bins1500/* results/metabat/fasta_bins
+rm -r results/metabat/final.contigs.fa.metabat-bins1500
+scripts/tools/metabin_rename.py

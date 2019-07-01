@@ -14,11 +14,11 @@
 module load concoct
 
 
-mkdir -p samples/concoct
-cut_up_fasta.py samples/contigs/final.contigs.fa  -c 10000 -o 0 --merge_last -b samples/concoct/contigs_10K.bed > samples/concoct/contigs_10K.fa
-concoct_coverage_table.py samples/concoct/contigs_10K.bed samples/mapping/reads.bam > samples/concoct/coverage_table.tsv
-concoct --composition_file samples/concoct/contigs_10K.fa --coverage_file samples/concoct/coverage_table.tsv -b samples/concoct/output/
-rm -rf samples/concoct/fasta_bins
-merge_cutup_clustering.py samples/concoct/output/clustering_gt1000.csv > samples/concoct/output/clustering_merged.csv
-mkdir samples/concoct/fasta_bins
-extract_fasta_bins.py samples/contigs/final.contigs.fa samples/concoct/output/clustering_merged.csv --output_path samples/concoct/fasta_bins
+mkdirs -p results/concoct
+cut_up_fasta.py samples/contigs/final.contigs.fa  -c 10000 -o 0 --merge_last -b results/concoct/contigs_10K.bed > results/concoct/contigs_10K.fa
+concoct_coverage_table.py results/concoct/contigs_10K.bed samples/mapping/reads.bam > results/concoct/coverage_table.tsv
+concoct --composition_file results/concoct/contigs_10K.fa --coverage_file results/concoct/coverage_table.tsv -b results/concoct/output/
+rm -rf results/concoct/fasta_bins
+merge_cutup_clustering.py results/concoct/output/clustering_gt1000.csv > results/concoct/output/clustering_merged.csv
+mkdir results/concoct/fasta_bins
+extract_fasta_bins.py results/contigs/final.contigs.fa results/concoct/output/clustering_merged.csv --output_path results/concoct/fasta_bins

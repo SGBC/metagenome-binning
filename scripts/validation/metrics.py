@@ -5,16 +5,13 @@ import subprocess
 import shutil
 import os
 import json
-
+import argparse
 
 from plotly.offline import plot
 from plotly.graph_objs import Heatmap
 import plotly.graph_objs as go
 from Bio import SeqIO
 
-
-test = False
-# test = True    # comment this line to run completly the metrics module
 
 class SoftwareNotFoundError(Exception):
     """Exception to raise when a software is not in the path
@@ -38,6 +35,7 @@ def blastx(db, query):
     diamond = software_exists("diamond")
     args = [diamond, "blastx", "-d", db, "-q", query, '-f', '6', 'qseqid', 'nident']
     output = subprocess.run(args, capture_output=True)
+    print(output.stderr)
     out = output.stdout
     out = out.decode()
     out = out.split("\n")
@@ -92,6 +90,9 @@ def andi(ref_paths, bins_paths):
         ref_paths = [ref_paths]
     args = [andi] + ref_paths + bins_paths + ["2> /dev/null"]
     andi_out = subprocess.run(args, capture_output=True)
+    print("End ANDI calculs, parsing")
+    if andi_out.stderr:
+        print("ANDI ERROR")
     # print(andi_out.stderr)
     andi_out = andi_out.stdout.decode('ascii')
     andi_txt = [i.split(" ") for i in andi_out.split("\n")][1:-1]
@@ -115,7 +116,12 @@ def make_index(files_paths):
 
 
 def andi_data(ref_paths, bins_paths, ref_index):
+    print("Running ANDI")
     # ref_index = json.loads(open(ref_index).read())
+    # print(ref_paths)
+    # print(bins_paths)
+    # print(ref_index)
+    # input()
     query_index = make_index(bins_paths)
     andi_index, andi_matrix = andi(ref_paths, bins_paths)
     for b in query_index.keys():
@@ -145,10 +151,12 @@ def andi_data(ref_paths, bins_paths, ref_index):
                     query_index[b][contig]["andi"] = "Conflicts"
             else:
                 query_index[b][contig]["andi"] = "Unknow"
+    print("End ANDI")
     return query_index
 
 
 def diamond_data(bins_paths, db_paths, query_index):
+    print("Running Diamond")
     for b in query_index.keys():
         for contig in query_index[b].keys():
             query_index[b][contig]["diamond"] = {}
@@ -186,6 +194,7 @@ def diamond_data(bins_paths, db_paths, query_index):
 
 
 def compile_data(query_index):
+    print("Compile data")
     bins_name = list(query_index.keys())
     bins_name.sort()
     bins_sect = []
@@ -274,20 +283,20 @@ def precision_recall(compos):
     return precision, recall
 
 
-def tests(bins_paths, ref_paths, db_paths, ref_index, setname):
-    bins_paths = [f"{bins_paths}/{i}" for i in os.listdir(bins_paths)]
+def tests(bins_paths, ref_paths, db_paths, ref_index, setname, draw=False):
+    # bins_paths = [f"{bins_paths}/{i}" for i in os.listdir(bins_paths)]
     #ref_paths = [f"{ref_paths}/{i}" for i in os.listdir(ref_paths)]
     query_index = andi_data(ref_paths, bins_paths, ref_index)
     query_index = diamond_data(bins_paths, db_paths, query_index)
     compo, ratio = compile_data(query_index)
     precision, recall = precision_recall(compo)
-    results = [draw_pre_rec(precision, recall, setname)]
-    results.append(draw_ratio(ratio, setname))
-    results.append(draw_compo(compo, setname))
+    results = [draw_pre_rec(precision, recall, setname, draw)]
+    results.append(draw_ratio(ratio, setname, draw))
+    results.append(draw_compo(compo, setname, draw))
     return(results)
 
 
-def draw_compo(compo, setname):
+def draw_compo(compo, setname, draw):
     bins_name = list(compo.keys())
     bins_name.sort()
     bins_sect = []
@@ -314,11 +323,14 @@ def draw_compo(compo, setname):
             title=f"Composition (b) of each originals organismes in {setname} bins"
         )
     fig = go.Figure(data=values, layout=layout)
-    # plot(fig)
-    return plot(fig, include_plotlyjs=True, output_type='div')
+    if draw:
+        plot(fig)
+        return None
+    else:
+        return plot(fig, include_plotlyjs=True, output_type='div')
 
 
-def draw_ratio(ratio, setname):
+def draw_ratio(ratio, setname, draw):
     bins_name = list(ratio.keys())
     bins_name.sort()
     bins_sect = []
@@ -347,11 +359,14 @@ def draw_ratio(ratio, setname):
             yaxis=dict(range=[0, 100])
         )
     fig = go.Figure(data=values, layout=layout)
-    # plot(fig)
-    return plot(fig, include_plotlyjs=True, output_type='div')
+    if draw:
+        plot(fig)
+        return None
+    else:
+        return plot(fig, include_plotlyjs=True, output_type='div')
 
 
-def draw_pre_rec(precision, recall, setname):
+def draw_pre_rec(precision, recall, setname, draw):
     bins_name = list(precision.keys())
     bins_name.sort()
     values = []
@@ -371,42 +386,104 @@ def draw_pre_rec(precision, recall, setname):
         title=f"Sensitivity/recall on {setname} bins"
     )
     fig = go.Figure(data=values, layout=layout)
-    # plot(fig)
-    return plot(fig, include_plotlyjs=True, output_type='div')
+    if draw:
+        plot(fig)
+        return None
+    else:
+        return plot(fig, include_plotlyjs=True, output_type='div')
 
 
-REF_FOLDER = "samples/chromosomes/"
-REF_path = "samples/chromosomes/all_chromo.fna"
-META_path = "samples/metabat/fasta_bins"
-CONC_path = "samples/concoct/fasta_bins"
-TNF_HCLUST = "samples/4NF_hclust_bins"
-PNF_HCLUST = "samples/5NF_hclust_bins"
-KM_clust = "samples/kmeans_clust"
-PUR_SET = "samples/pur_set"
-SMALL_SET = "samples/test"
-DB_Path = [f"samples/diamond_db/{i}" for i in os.listdir("samples/diamond_db/")]
+def main():
+    desc = "desc here"
+    parser = argparse.ArgumentParser(
+        prog="metrics",
+        description=desc
+        )
+    parser.add_argument(
+        "-i",
+        "--input",
+        metavar=".fna",
+        type=str,
+        required=True,
+        help="Input contigs files in nucleic fasta format",
+        nargs="+"
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        metavar="output_folder",
+        type=str,
+        help="path to output folder"
+    )
+    parser.add_argument(
+        "-r",
+        "--ref",
+        default="samples/chromosomes/all_chromo.fna",
+        type=str
+    )
+    parser.add_argument(
+        '--db',
+        metavar="diamond_db_folder/*",
+        type=str,
+        help="Diamond db folder with db of ref proteom",
+        default=[f"samples/diamond_db/{i}" for i in os.listdir("samples/diamond_db/")],
+        nargs="+"
+    )
+    parser.add_argument(
+        "--index",
+        metavar="ref sequence name index",
+        type=str,
+        default="samples/chromosomes/index_chromo"
+    )
+    parser.add_argument(
+        "-n",
+        "--setname",
+        metavar='"metabat set"',
+        type=str,
+        default="{Insert name here} set"
+    )
+    args = parser.parse_args()
 
 
+    # path = [PUR_SET, META_path, CONC_path, TNF_HCLUST, KM_clust]
+    # metaname = ["Originals chromosomes (test)", "metabat", "concoct",
+    #             "Aglomerative_clustering", "Kmeans_clustering"]
 
-os.makedirs("metrics", exist_ok=True)
-path = [PUR_SET, META_path, CONC_path, TNF_HCLUST, KM_clust]
-metaname = ["Originals chromosomes (test)", "metabat", "concoct",
-            "4NF_hclust", "Kmeans_clust"]
+    ref_index = args.index
+    ref_index = json.loads(open(ref_index).read())
 
-ref_index = "samples/chromosomes/index_chromo"
-ref_index = json.loads(open(ref_index).read())
+    # print(ref_index)
+    to_write = []
+    draw = True
+    if args.output:
+        draw = False
 
-# print(ref_index)
-to_write = []
-if test:
-    to_write += tests(path[0], REF_path, DB_Path, ref_index, metaname[0])
-else:
-    for p, m in zip(path, metaname):
-        to_write += tests(p, REF_path, DB_Path, ref_index, m)
+    to_write = tests(args.input, args.ref, args.db, ref_index, args.setname, draw)
+    # else:
+    #     for p, m in zip(path, metaname):
+    #         to_write += tests(p, REF_path, DB_Path, ref_index, m)
 
-with open("metrics/results.html", "w") as save:
-    save.write("<html><body>")
-    for graph in to_write:
-        save.writelines(graph)
-        save.write("</br></hr>")
-    save.write("</body></html>")
+    if args.output:
+        os.makedirs(args.output, exist_ok=True)
+        with open(f"{args.output}/results.html", "w") as save:
+            save.write("<html><body>")
+            for graph in to_write:
+                save.writelines(graph)
+                save.write("</br></hr>")
+            save.write("</body></html>")
+
+
+# REF_FOLDER = "samples/chromosomes/"
+# REF_path = "samples/chromosomes/all_chromo.fna"
+# META_path = "samples/metabat/fasta_bins"
+# CONC_path = "samples/concoct/fasta_bins"
+# TNF_HCLUST = "samples/4NF_hclust_bins"
+# PNF_HCLUST = "samples/5NF_hclust_bins"
+# KM_clust = "samples/kmeans_clust"
+# PUR_SET = "samples/pur_set"
+# SMALL_SET = "samples/test"
+# DB_Path = [f"samples/diamond_db/{i}" for i in os.listdir("samples/diamond_db/")]
+
+if __name__ == "__main__":
+    main()
+

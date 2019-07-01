@@ -15,5 +15,5 @@ module load prokka
 module load python/3.7.3
 module load diamond
 
-./scripts/prot_map_ref.py
-./scripts/diamond_db.py
+./scripts/tools/prot_map_ref.py
+./scripts/tools/diamond_db.py
