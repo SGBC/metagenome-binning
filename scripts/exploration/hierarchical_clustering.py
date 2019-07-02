@@ -16,6 +16,10 @@ from multiprocessing import Pool
 from numpy import arange
 import pysam
 
+from sklearn.metrics import silhouette_score
+from sklearn.metrics import calinski_harabasz_score as ch_score
+from sklearn.metrics import davies_bouldin_score as db_score
+
 from plotly.offline import plot
 import plotly.graph_objs as go
 
@@ -42,7 +46,7 @@ def clustering(nf_matrix, c_tables, matrix, dist):
 def main():
     desc = "desc here"
     parser = argparse.ArgumentParser(
-        prog="4NF_clustering",
+        prog="hclust",
         description=desc
         )
     parser.add_argument(
@@ -106,10 +110,11 @@ def main():
     vars_clust = []
     def_cluster = None
     print("Clustering")
-    seuils = [10, 1, 0.1, 0.01]
+    seuils = [0.01] #[10, 1, 0.1, 0.01]
     bound_up, bound_down = 52, 1
     print(f"Distance threshold : [{round(bound_down,3)};{round(bound_up,3)};{seuils[0]}]")
     clusters = {}
+    to_write = []
     for s in range(len(seuils)):
         with Pool(processes=(os.cpu_count())-1) as pool:
             queue = [(nf_matrix, c_tables, matrix, i) for i in arange(bound_down, bound_up, seuils[s]) if i not in clusters.keys()]
@@ -117,6 +122,24 @@ def main():
         var_clust.sort()
         for clust in var_clust:
             clusters[clust[0]] = list(clust[3])
+            cluster = list(clust[3])
+            c = []
+            for i in cluster:
+                if i not in c:
+                    c.append(i)
+            var = toolsbox.ball_hall(cluster, matrix)
+            dunn = "none"
+            sil = "none"
+            ch = "none"
+            db = "none"
+            if len(c) > 1:
+                dunn = round(toolsbox.dunn(cluster, c_tables, matrix), 3)
+                sil = round(silhouette_score(matrix, cluster, metric='cityblock'), 3)
+                ch = round(ch_score(matrix, cluster), 3)
+                db = round(db_score(matrix, cluster), 3)
+            print(f"{len(c):>3}: Ball-Hall = {round(var,3):<8} Dunn = {dunn:<5} Silhouette coef = {sil:<5} CH_score = {ch:<5} DB_score = {db:<5}")
+            to_write.append(f"seuil {clust[0]:<5} cluster {len(c):>5}: Ball-Hall = {round(var,3):<8} Dunn = {dunn:<5} Silhouette coef = {sil:<5} CH_score = {ch:<5} DB_score = {db:<5}")
+
         variances = [i[1] for i in var_clust]
         mean_variance = sum(variances)/len(variances)
         var_clust = [i[:3] for i in var_clust]
@@ -124,7 +147,7 @@ def main():
         x = [i[0] for i in var_clust]
         y = [i[1] for i in var_clust]
         if toolsbox.plateau(x, y):
-            dist = toolsbox.plateau(var_clust)[0]
+            dist = toolsbox.plateau(x, y)
             dists = [i[0] for i in var_clust]
             print(f"\a<!> {dist} is the distance selected, she produce {var_clust[dists.index(dist)][2]} clusters <!>")
             print("<!> Reason : low slope <!>")
@@ -143,6 +166,9 @@ def main():
             bound_up = var_clust[var.index(min(var))][0]
             bound_down = bound_up-seuils[s]
             print(f"Distance threshold : [{round(bound_down,3)};{round(bound_up,3)};{seuils[s+1]}], Clusters: [{var_clust[-1][2]};{var_clust[0][2]}]")
+    with open("results/hclust_rawdata", "w") as f:
+        for i in to_write:
+            f.write(str(i+"\n"))
 
     vars_clust = [(i, j, k) for (j, i, k) in vars_clust]
     toolsbox.save(args.input, def_cluster, c_tables, output)
