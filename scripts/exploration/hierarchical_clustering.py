@@ -39,6 +39,7 @@ Kisses, the wicked programmer <3
 def clustering(nf_matrix, c_tables, matrix, dist):
     cluster = AC(affinity="cityblock", compute_full_tree=True, linkage="average", n_clusters=None, distance_threshold=dist).fit_predict(nf_matrix)
     var, nb = toolsbox.variance(cluster, c_tables, matrix)
+    print(nb, var)
     return (dist, var, nb, cluster)
 
 
@@ -110,7 +111,7 @@ def main():
     vars_clust = []
     def_cluster = None
     print("Clustering")
-    seuils = [0.01] #[10, 1, 0.1, 0.01]
+    seuils = [0.1] #[10, 1, 0.1, 0.01]
     bound_up, bound_down = 52, 1
     print(f"Distance threshold : [{round(bound_down,3)};{round(bound_up,3)};{seuils[0]}]")
     clusters = {}
