@@ -111,7 +111,7 @@ def main():
     vars_clust = []
     def_cluster = None
     print("Clustering")
-    seuils = [0.1] #[10, 1, 0.1, 0.01]
+    seuils = [0.025] #[10, 1, 0.1, 0.01]
     bound_up, bound_down = 52, 1
     print(f"Distance threshold : [{round(bound_down,3)};{round(bound_up,3)};{seuils[0]}]")
     clusters = {}
