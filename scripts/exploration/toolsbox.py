@@ -161,12 +161,12 @@ def vector_variance(x):
     return float(total/len(x))
 
 
-def variance(x):
-    x_mean = sum(x)/len(x)
-    total = 0
-    for i in x:
-        total += (x_mean-i)**2
-    return total/len(x)
+# def variance(x):
+#     x_mean = sum(x)/len(x)
+#     total = 0
+#     for i in x:
+#         total += (x_mean-i)**2
+#     return total/len(x)
 
 
 def local_min(vars_list):
