@@ -20,7 +20,11 @@ def load(files, kmer, bam):
             for record in fasta:
                 contig_freq = nucleotides_frequences(record.seq, kmer, vars_list)
                 if bam:
-                    contig_freq.append(bam.count(record.id))
+                    cov = bam.count(record.id)
+                    if cov:
+                        contig_freq.append(cov)
+                    else:
+                        contig_freq.append(1)
                 contigs_index.append(record.id)
                 matrix.append(contig_freq)
                 count += 1
@@ -28,8 +32,9 @@ def load(files, kmer, bam):
     print("\nLoading succesfully")
     if bam:
         vars_list.append("Cov")
-    np_matrix = np.array(recentring(matrix))
-    return np_matrix, contigs_index, vars_list
+    # np_matrix = np.array(recentring(matrix))
+    # return np_matrix, contigs_index, vars_list
+    return matrix, contigs_index, vars_list
 
 
 def min_max(value, mini, maxi):
@@ -89,45 +94,51 @@ def save(files, clust, contigs, output):
         SeqIO.write(bins[k], f"{output}/{k}.fa", "fasta")
 
 
-# def variance(cluster, c_tables, matrix):
-#     bins = {}
-#     for clust, c_id in zip(cluster, c_tables):
-#         if clust in bins.keys():
-#             bins[clust].append(c_id)
-#         else:
-#             bins[clust] = [c_id]
-#     variances = []
-#     bins_keys = list(bins.keys())
-#     bins_keys.sort()
-#     for b in bins_keys:
-#         count = 0
-#         total = 0
-#         for i in bins[b]:
-#             for j in bins[b][bins[b].index(i)+1:]:
-#                 total += matrix[c_tables.index(i)][c_tables.index(j)]
-#                 count += 1
-#         if count > 0:
-#             mean = total/count
-#             square_count = 0
-#             for i in bins[b]:
-#                 for j in bins[b][bins[b].index(i)+1:]:
-#                     square_count += (matrix[c_tables.index(i)][c_tables.index(j)]-mean)**2
-#             variance = square_count/count
-#         else:
-#             variance = 1
-#         variances.append(variance)
-#     if len(bins_keys) > 0:
-#         return sum(variances)/len(variances), len(bins_keys)
-#     else:
-#         return 10**10, 0
+def variance(cluster, c_tables, matrix):
+    bins = {}
+    for clust, c_id in zip(cluster, c_tables):
+        if clust in bins.keys():
+            bins[clust].append(c_id)
+        else:
+            bins[clust] = [c_id]
+    variances = []
+    bins_keys = list(bins.keys())
+    bins_keys.sort()
+    for b in bins_keys:
+        count = 0
+        total = 0
+        for i in bins[b]:
+            for j in bins[b][bins[b].index(i)+1:]:
+                total += matrix[c_tables.index(i)][c_tables.index(j)]
+                count += 1
+        if count > 0:
+            mean = total/count
+            square_count = 0
+            for i in bins[b]:
+                for j in bins[b][bins[b].index(i)+1:]:
+                    square_count += (matrix[c_tables.index(i)][c_tables.index(j)]-mean)**2
+            variance = square_count/count
+        else:
+            variance = 1
+        variances.append(variance)
+    if len(bins_keys) > 0:
+        return sum(variances)/len(variances), len(bins_keys)
+    else:
+        return 10**10, 0
 
-def ball_hall(cluster, matrix):
+
+def sort_clusters(cluster, matrix):
     clusters = {}
     for i in range(len(cluster)):
         if cluster[i] in clusters.keys():
             clusters[cluster[i]].append(matrix[i])
         else:
             clusters[cluster[i]] = [matrix[i]]
+    return clusters
+
+
+def ball_hall(cluster, matrix):
+    clusters = sort_clusters(cluster, matrix)
     variances = []
     for clust in clusters.keys():
         variances.append(vector_variance(clusters[clust]))
@@ -150,12 +161,12 @@ def vector_variance(x):
     return float(total/len(x))
 
 
-# def variance(x):
-#     x_mean = sum(x)/len(x)
-#     total = 0
-#     for i in x:
-#         total += (x_mean-i)**2
-#     return total/len(x)
+def variance(x):
+    x_mean = sum(x)/len(x)
+    total = 0
+    for i in x:
+        total += (x_mean-i)**2
+    return total/len(x)
 
 
 def local_min(vars_list):
@@ -196,12 +207,13 @@ def dunn(cluster, c_tables, matrix):
     min_outside = 10**10
     contigs = {}
     clust_name = []
+    # print(c_tables[-1])
     for c, contig in zip(cluster, c_tables):
         contigs[contig] = c
         if c not in clust_name:
             clust_name.append(c)
     if len(clust_name) > 1:
-        for i, j in combinations(contigs.keys(),2):
+        for i, j in combinations(contigs.keys(), 2):
             if contigs[i] == contigs[j]:
                 max_inside = max(max_inside, matrix[c_tables.index(i)][c_tables.index(j)])
             else:
