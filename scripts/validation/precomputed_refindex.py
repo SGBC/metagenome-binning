@@ -6,10 +6,7 @@ import shutil
 import os
 import json
 import argparse
-
-from plotly.offline import plot
-from plotly.graph_objs import Heatmap
-import plotly.graph_objs as go
+from hashlib import sha256
 from Bio import SeqIO
 
 
@@ -35,7 +32,7 @@ def blastx(db, query):
     diamond = software_exists("diamond")
     args = [diamond, "blastx", "-d", db, "-q", query, '-f', '6', 'qseqid', 'nident']
     output = subprocess.run(args, capture_output=True)
-    print(output.stderr)
+    # print(output.stderr)
     out = output.stdout
     out = out.decode()
     out = out.split("\n")
@@ -93,7 +90,6 @@ def andi(ref_paths, bins_paths):
     print("End ANDI calculs, parsing")
     if andi_out.stderr:
         print("ANDI ERROR")
-    # print(andi_out.stderr)
     andi_out = andi_out.stdout.decode('ascii')
     andi_txt = [i.split(" ") for i in andi_out.split("\n")][1:-1]
     samples = [i[0] for i in andi_txt]
@@ -117,11 +113,6 @@ def make_index(files_paths):
 
 def andi_data(ref_paths, bins_paths, ref_index):
     print("Running ANDI")
-    # ref_index = json.loads(open(ref_index).read())
-    # print(ref_paths)
-    # print(bins_paths)
-    # print(ref_index)
-    # input()
     query_index = make_index(bins_paths)
     andi_index, andi_matrix = andi(ref_paths, bins_paths)
     for b in query_index.keys():
@@ -166,7 +157,6 @@ def diamond_data(bins_paths, db_paths, query_index):
             for b in query_index.keys():
                 for contig in query_index[b].keys():
                     db_name = os.path.basename(db)
-                    # print(db_name.split(".")[0])
                     if contig in genes_score.keys():
                         if "." in db_name:
                             query_index[b][contig]["diamond"][db_name.split(".")[0]] = genes_score[contig]
@@ -174,7 +164,6 @@ def diamond_data(bins_paths, db_paths, query_index):
                             query_index[b][contig]["diamond"][db_name] = genes_score[contig]
     for b in query_index.keys():
         for contig in query_index[b].keys():
-            # print(query_index[b][contig])
             maxi = 0
             for ref in query_index[b][contig]["diamond"].keys():
                 maxi = max(maxi, query_index[b][contig]["diamond"][ref])
@@ -189,7 +178,6 @@ def diamond_data(bins_paths, db_paths, query_index):
                     query_index[b][contig]["diamond"] = refs
                 else:
                     query_index[b][contig]["diamond"] = refs[0]
-    # print(query_index[b][contig])
     return query_index
 
 
@@ -198,8 +186,10 @@ def compile_data(query_index):
     bins_name = list(query_index.keys())
     bins_name.sort()
     bins_sect = []
+    final_index = {}
     for b in bins_name:
         for contig in query_index[b].keys():
+            sect = ""
             if not isinstance(query_index[b][contig]["andi"], list):
                 sect = query_index[b][contig]["andi"]
             if "." in sect:
@@ -212,23 +202,9 @@ def compile_data(query_index):
                 sect = sect.split(".")[0]
             if sect not in bins_sect:
                 bins_sect.append(sect)
-    bins_compo = {}
-    bins_ratio = {}
     for b in bins_name:
-        b_len = 0
-        bins_compo[b] = {}
-        bins_compo[b]["andi"] = {}
-        bins_compo[b]["diamond"] = {}
-        bins_compo[b]["consensus"] = {}
-        for sect in bins_sect:
-            for i in bins_compo[b].keys():
-                bins_compo[b][i][sect] = 0
         for contig in query_index[b].keys():
-            # print(b, contig)
-            # print(query_index[b])
-            b_len += query_index[b][contig]["lenght"]
-            bins_compo[b]["andi"][query_index[b][contig]['andi']] += query_index[b][contig]['lenght']
-            bins_compo[b]["diamond"][query_index[b][contig]['diamond']] += query_index[b][contig]['lenght']
+            cid, specie, code = contig,"",""
             if isinstance(query_index[b][contig]['andi'], list) and isinstance(query_index[b][contig]['diamond'], list):
                 consensus = []
                 for i in query_index[b][contig]['andi']:
@@ -236,173 +212,69 @@ def compile_data(query_index):
                         if i == j:
                             consensus.append(i)
                 if len(consensus) == 1:
-                    bins_compo[b]["consensus"][consensus[0]] += query_index[b][contig]['lenght']
+                    specie = consensus[0]
+                    code = "ADL"
+                    final_index[cid] = (specie, code)
                 else:
-                    bins_compo[b]["consensus"]["Conflicts"] += query_index[b][contig]['lenght']
-            elif isinstance(query_index[b][contig]['andi'], list) and query_index[b][contig]['diamond'] in query_index[b][contig]['andi']:
-                bins_compo[b]["consensus"][query_index[b][contig]['diamond']] += query_index[b][contig]['lenght']
-            elif isinstance(query_index[b][contig]['diamond'], list) and query_index[b][contig]['andi'] in query_index[b][contig]['diamond']:
-                bins_compo[b]["consensus"][query_index[b][contig]['andi']] += query_index[b][contig]['lenght']
+                    specie = "Conflict"
+                    code = "ADLC"
+            elif isinstance(query_index[b][contig]['andi'], list):
+                if query_index[b][contig]['diamond'] in query_index[b][contig]['andi']:
+                    specie = query_index[b][contig]['diamond']
+                    if specie != "Unknow":
+                        code = "ALDO"
+                    else:
+                        code = "ALDUC"
+                else:
+                    specie = query_index[b][contig]['diamond']
+                    # specie = "Conflict"
+                    code = "ALDOC"
+            elif isinstance(query_index[b][contig]['diamond'], list):
+                if query_index[b][contig]['andi'] in query_index[b][contig]['diamond']:
+                    specie = query_index[b][contig]['andi']
+                    if specie != "Unknow":
+                        code = "AODL"
+                    else:
+                        code = "AUDLC"
+                else:
+                    specie = query_index[b][contig]['andi']
+                    # specie = "Conflict"
+                    code = "AODLC"
             elif query_index[b][contig]['andi'] == query_index[b][contig]['diamond']:
-                bins_compo[b]["consensus"][query_index[b][contig]['andi']] += query_index[b][contig]['lenght']
-            elif query_index[b][contig]['andi'] == "Unknow" and query_index[b][contig]['diamond'] != "Unknow":
-                bins_compo[b]["consensus"][query_index[b][contig]['diamond']] += query_index[b][contig]['lenght']
-            elif query_index[b][contig]['diamond'] == "Unknow" and query_index[b][contig]["andi"] != "Unknow":
-                bins_compo[b]["consensus"][query_index[b][contig]['andi']] += query_index[b][contig]['lenght']
+                specie = query_index[b][contig]["andi"]
+                if specie != "Unknow":
+                    code = "ADO"
+                else:
+                    code = "U"
+            elif query_index[b][contig]['andi'] == "Unknow":
+                specie = query_index[b][contig]['diamond']
+                code = "AUD"
+            elif query_index[b][contig]['diamond'] == "Unknow":
+                specie = query_index[b][contig]['andi']
+                code = "ADU"
             else:
                 bins_compo[b]["consensus"]["Conflicts"] += query_index[b][contig]['lenght']
-        bins_ratio[b] = {}
-        for m in bins_compo[b].keys():
-            bins_ratio[b][m] = {}
-            for c in bins_compo[b][m].keys():
-                bins_ratio[b][m][c] = bins_compo[b][m][c]/b_len
-    print("bincompo\n", bins_compo)
-    print("binratio\n", bins_ratio)
-    return (bins_compo, bins_ratio)
+            final_index[cid] = [specie, code]
+    return final_index
 
 
-def precision_recall(compos):
-    to_write = []
-    global_compo = {}
-    precision = {}
-    recall = {}
-    for b in compos.keys():
-        for orga in compos[b]["consensus"].keys():
-            if orga in global_compo.keys():
-                global_compo[orga] += compos[b]["consensus"][orga]
-            else:
-                global_compo[orga] = compos[b]["consensus"][orga]
-    for b in compos.keys():
-        dominant_score = max(compos[b]["consensus"].values())
-        dominant_name = ""
-        for k in compos[b]["consensus"].keys():
-            if compos[b]["consensus"][k] == dominant_score:
-                dominant_name = k
-        print(compos[b])
-        precision[b] = dominant_score/sum(compos[b]["consensus"].values())
-        recall[b] = dominant_score/global_compo[dominant_name]
-        to_write.append(f"Bin {b}\tprecision: {round((precision[b]*100), 2)} %")
-        to_write.append(f"Bin {b}\trecall: {round(recall[b]*100, 2)} %")
-    precision["Mean"] = sum(precision.values())/len(precision.keys())
-    recall["Mean"] = sum(recall.values())/len(recall.keys())
-    to_write.append(f"Mean precision: {round(precision['Mean']*100, 2)} %")
-    to_write.append(f"Mean recall: {round(recall['Mean']*100, 2)} %")
-    for l in to_write:
-        print(l)
-    with open("logs.log", 'a') as logs:
-        for i in to_write:
-            logs.write(i+"\n")
-    return precision, recall
+def hash_calc(final_index, ref_path):
+    for file in ref_path:
+        with open(file) as fasta_file:
+            fasta = SeqIO.parse(fasta_file, "fasta")
+            for record in fasta:
+                final_index[record.id].append(sha256(str(record.seq).encode()).hexdigest())
+    return final_index
 
 
-def tests(bins_paths, ref_paths, db_paths, ref_index, setname, draw=False):
-    # bins_paths = [f"{bins_paths}/{i}" for i in os.listdir(bins_paths)]
-    #ref_paths = [f"{ref_paths}/{i}" for i in os.listdir(ref_paths)]
+def tests(bins_paths, ref_paths, db_paths, ref_index):
     query_index = andi_data(ref_paths, bins_paths, ref_index)
     query_index = diamond_data(bins_paths, db_paths, query_index)
-    compo, ratio = compile_data(query_index)
-    precision, recall = precision_recall(compo)
-    results = [draw_pre_rec(precision, recall, setname, draw)]
-    results.append(draw_ratio(ratio, setname, draw))
-    results.append(draw_compo(compo, setname, draw))
-    return(results)
-
-
-def draw_compo(compo, setname, draw):
-    bins_name = list(compo.keys())
-    bins_name.sort()
-    bins_sect = []
-    for b in bins_name:
-        for sect in compo[b]["consensus"].keys():
-            if sect not in bins_sect:
-                bins_sect.append(sect)
-    values = []
-    for sect in bins_sect:
-        y_data = []
-        for x in bins_name:
-            if sect in compo[x]['consensus'].keys():
-                y_data.append(compo[x]["consensus"][sect]*100)
-            else:
-                y_data.append(0)
-        trace = go.Bar(
-            x=bins_name,
-            y=y_data,
-            name=sect
-        )
-        values.append(trace)
-        layout = go.Layout(
-            barmode="stack",
-            title=f"Composition (b) of each originals organismes in {setname} bins"
-        )
-    fig = go.Figure(data=values, layout=layout)
-    if draw:
-        plot(fig)
-        return None
-    else:
-        return plot(fig, include_plotlyjs=True, output_type='div')
-
-
-def draw_ratio(ratio, setname, draw):
-    bins_name = list(ratio.keys())
-    bins_name.sort()
-    bins_sect = []
-    for b in bins_name:
-        for sect in ratio[b]["consensus"].keys():
-            if sect not in bins_sect:
-                bins_sect.append(sect)
-    values = []
-    for sect in bins_sect:
-        y_data = []
-        for x in bins_name:
-            # print(ratio[x])
-            if sect in ratio[x]["consensus"].keys():
-                y_data.append(ratio[x]["consensus"][sect]*100)
-            else:
-                y_data.append(0)
-        trace = go.Bar(
-            x=bins_name,
-            y=y_data,
-            name=sect
-        )
-        values.append(trace)
-        layout = go.Layout(
-            barmode="stack",
-            title=f"Composition (%) of each originals organismes in {setname} bins",
-            yaxis=dict(range=[0, 100])
-        )
-    fig = go.Figure(data=values, layout=layout)
-    if draw:
-        plot(fig)
-        return None
-    else:
-        return plot(fig, include_plotlyjs=True, output_type='div')
-
-
-def draw_pre_rec(precision, recall, setname, draw):
-    bins_name = list(precision.keys())
-    bins_name.sort()
-    values = []
-    values.append(go.Bar(
-        x=bins_name,
-        y=[precision[k]*100 for k in bins_name],
-        name='Sensitivity'
-    ))
-    values.append(go.Bar(
-        x=bins_name,
-        y=[recall[k]*100 for k in bins_name],
-        name='Recall'
-    ))
-    layout = go.Layout(
-        barmode='group',
-        yaxis=dict(range=[0, 100]),
-        title=f"Sensitivity/recall on {setname} bins"
-    )
-    fig = go.Figure(data=values, layout=layout)
-    if draw:
-        plot(fig)
-        return None
-    else:
-        return plot(fig, include_plotlyjs=True, output_type='div')
+    final_index = compile_data(query_index)
+    final_index = hash_calc(final_index, bins_paths)
+    for k in final_index.keys():
+        print(k, "\t", final_index[k][1], "\t", final_index[k][0])
+    return(final_index)
 
 
 def main():
@@ -425,7 +297,8 @@ def main():
         "--output",
         metavar="output_folder",
         type=str,
-        help="path to output folder"
+        help="path to output folder",
+        default="results"
     )
     parser.add_argument(
         "-r",
@@ -456,46 +329,16 @@ def main():
     )
     args = parser.parse_args()
 
-
-    # path = [PUR_SET, META_path, CONC_path, TNF_HCLUST, KM_clust]
-    # metaname = ["Originals chromosomes (test)", "metabat", "concoct",
-    #             "Aglomerative_clustering", "Kmeans_clustering"]
-
     ref_index = args.index
     ref_index = json.loads(open(ref_index).read())
 
-    # print(ref_index)
-    to_write = []
-    draw = True
-    if args.output:
-        draw = False
+    to_write = ""
 
-    to_write = tests(args.input, args.ref, args.db, ref_index, args.setname, draw)
-    # else:
-    #     for p, m in zip(path, metaname):
-    #         to_write += tests(p, REF_path, DB_Path, ref_index, m)
+    to_write = json.dumps(tests(args.input, args.ref, args.db, ref_index))
 
-    if args.output:
-        os.makedirs(args.output, exist_ok=True)
-        with open(f"{args.output}/results.html", "w") as save:
-            save.write("<html><body>")
-            for graph in to_write:
-                save.writelines(graph)
-                save.write("</br></hr>")
-            save.write("</body></html>")
-
-
-# REF_FOLDER = "samples/chromosomes/"
-# REF_path = "samples/chromosomes/all_chromo.fna"
-# META_path = "samples/metabat/fasta_bins"
-# CONC_path = "samples/concoct/fasta_bins"
-# TNF_HCLUST = "samples/4NF_hclust_bins"
-# PNF_HCLUST = "samples/5NF_hclust_bins"
-# KM_clust = "samples/kmeans_clust"
-# PUR_SET = "samples/pur_set"
-# SMALL_SET = "samples/test"
-# DB_Path = [f"samples/diamond_db/{i}" for i in os.listdir("samples/diamond_db/")]
+    os.makedirs(args.output, exist_ok=True)
+    with open(f"{args.output}/seq_index.json", "w") as save:
+        save.write(to_write)
 
 if __name__ == "__main__":
     main()
-

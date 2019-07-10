@@ -19,9 +19,7 @@ bins: metabat concoct
 
 metrics:
 	@echo -e '$(yellow)! Metrics are not yet fully implemented$(blk)'
-	@cat samples/metabat/time
-	@cat samples/concoct/time
-	@bash metrics.sh
+	
 
 # samples/diamond_db/*: samples/prot_map/*
 # 	scripts/diamond_db.py
@@ -81,3 +79,56 @@ metabat: samples/mapping/reads.bam
 concoct: samples/mapping/reads.bam
 	@echo -e "$(yellow)=== Concoct ===$(blk)"
 	@qsub concoct.sh
+
+clustering:
+	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/Optimale10 --bam samples/mapping/reads.bam -c 10
+	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/ball-hall-30 -m ball-hall --bam samples/mapping/reads.bam -c 30
+	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/dunn-30 -m dunn --bam samples/mapping/reads.bam -c 30
+	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/silhouette-30 -m silhouette --bam samples/mapping/reads.bam -c 30
+	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/ch-index-30 -m ch-index --bam samples/mapping/reads.bam -c 30
+	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/db-index-30 -m ball-hall --bam samples/mapping/reads.bam -c 30
+	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/ball-hall-30-nopal -m ball-hall --bam samples/mapping/reads.bam -c 30 --nopal
+	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/dunn-30-nopal -m dunn --bam samples/mapping/reads.bam -c 30 --nopal
+	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/silhouette-30-nopal -m silhouette --bam samples/mapping/reads.bam -c 30 --nopal
+	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/ch-index-30-nopal -m ch-index --bam samples/mapping/reads.bam -c 30 --nopal
+	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/db-index-30-nopal -m ball-hall --bam samples/mapping/reads.bam -c 30 --nopal
+	
+	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/Optimale10 -c 10
+	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/ball-hall -m ball-hall
+	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/dunn -m dunn
+	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/silhouette -m silhouette
+	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/ch-index -m ch-index
+	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/db-index -m db-index
+	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/ball-hall-nopal -m ball-hall --nopal
+	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/dunn-nopal -m dunn --nopal
+	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/silhouette-nopal -m silhouette --nopal
+	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/ch-index-nopal -m ch-index --nopal
+	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/db-index-nopal -m db-index --nopal
+
+report:
+	scripts/validation/fast_metrics.py -i results/metabat/fasta_bins/* -m samples/seq_index.json -n "Metabat" -o graphs/metabat/ --map
+	scripts/validation/fast_metrics.py -i results/concoct/fasta_bins/* -m samples/seq_index.json -n "concoct" -o graphs/concoct/ --map
+
+	scripts/validation/fast_metrics.py -i results/H_clust/Optimale10/* -m samples/seq_index.json -n "H_clust Optimal (nb_clust = 10)" -o graphs/H_clust/ --map
+	scripts/validation/fast_metrics.py -i results/H_clust/ball-hall/* -m samples/seq_index.json -n "H_clust ball-hall" -o graphs/H_clust/ --map
+	scripts/validation/fast_metrics.py -i results/H_clust/ball-hall-nopal/* -m samples/seq_index.json -n "H_clust ball-hall nopal" -o graphs/H_clust/ --map
+	scripts/validation/fast_metrics.py -i results/H_clust/ch-index/* -m samples/seq_index.json -n "H_clust ch-index" -o graphs/H_clust/ --map
+	scripts/validation/fast_metrics.py -i results/H_clust/ch-index-nopal/* -m samples/seq_index.json -n "H_clust ch-index-nopal" -o graphs/H_clust/ --map
+	scripts/validation/fast_metrics.py -i results/H_clust/db-index/* -m samples/seq_index.json -n "H_clust db-index" -o graphs/H_clust/ --map
+	scripts/validation/fast_metrics.py -i results/H_clust/db-index-nopal/* -m samples/seq_index.json -n "H_clust db-index-nopal" -o graphs/H_clust/ --map
+	scripts/validation/fast_metrics.py -i results/H_clust/dunn/* -m samples/seq_index.json -n "H_clust dunn" -o graphs/H_clust/ --map
+	scripts/validation/fast_metrics.py -i results/H_clust/dunn-nopal/* -m samples/seq_index.json -n "H_clust dunn-nopal" -o graphs/H_clust/ --map
+	scripts/validation/fast_metrics.py -i results/H_clust/silhouette/* -m samples/seq_index.json -n "H_clust silhouette" -o graphs/H_clust/ --map
+	scripts/validation/fast_metrics.py -i results/H_clust/silhouette-nopal/* -m samples/seq_index.json -n "H_clust silhouette-nopal" -o graphs/H_clust/ --map
+
+	scripts/validation/fast_metrics.py -i results/K-means/Optimale10/* -m samples/seq_index.json -n "K-means Optimal (nb_clust = 10)" -o graphs/K-means/ --map
+	scripts/validation/fast_metrics.py -i results/K-means/ball-hall-30/* -m samples/seq_index.json -n "K-means ball-hall (nb_max_clust = 29)" -o graphs/K-means/ --map
+	scripts/validation/fast_metrics.py -i results/K-means/ball-hall-30-nopal/* -m samples/seq_index.json -n "K-means ball-hall nopal (nb_max_clust = 29)" -o graphs/K-means/ --map
+	scripts/validation/fast_metrics.py -i results/K-means/ch-index-30/* -m samples/seq_index.json -n "K-means ch-index (nb_max_clust = 29)" -o graphs/K-means/ --map
+	scripts/validation/fast_metrics.py -i results/K-means/ch-index-30-nopal/* -m samples/seq_index.json -n "K-means ch-index-nopal (nb_max_clust = 29)" -o graphs/K-means/ --map
+	scripts/validation/fast_metrics.py -i results/K-means/db-index-30/* -m samples/seq_index.json -n "K-means db-index (nb_max_clust = 29)" -o graphs/K-means/ --map
+	scripts/validation/fast_metrics.py -i results/K-means/db-index-30-nopal/* -m samples/seq_index.json -n "K-means db-index-nopal (nb_max_clust = 29)" -o graphs/K-means/ --map
+	scripts/validation/fast_metrics.py -i results/K-means/dunn-30/* -m samples/seq_index.json -n "K-means dunn (nb_max_clust = 29)" -o graphs/K-means/ --map
+	scripts/validation/fast_metrics.py -i results/K-means/dunn-30-nopal/* -m samples/seq_index.json -n "K-means dunn-nopal (nb_max_clust = 29)" -o graphs/K-means/ --map
+	scripts/validation/fast_metrics.py -i results/K-means/silhouette-30/* -m samples/seq_index.json -n "K-means silhouette (nb_max_clust = 29)" -o graphs/K-means/ --map
+	scripts/validation/fast_metrics.py -i results/K-means/silhouette-30-nopal/* -m samples/seq_index.json -n "K-means silhouette-nopal (nb_max_clust = 29)" -o graphs/K-means/ --map

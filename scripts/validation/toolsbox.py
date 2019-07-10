@@ -7,39 +7,28 @@ from itertools import product, combinations
 from Bio import SeqIO
 import numpy as np
 from scipy.spatial.distance import pdist
-import os
 
 
-def load(files, kmer, bam, nopal=False, c_filter=0, ponderation=False):
+def load(files, kmer, bam, nopal=False):
     vars_list = ["".join(i) for i in product("ATCG", repeat=kmer)]
     matrix, contigs_index = [], []
     count = 0
-    not_valid = 0
     for file in files:
         f = open(file)
         with f:
             fasta = SeqIO.parse(f, "fasta")
             for record in fasta:
-                valid_seq = True
-                if c_filter:
-                    if len(str(record.seq)) < c_filter:
-                        valid_seq = False
-                        not_valid += 1
-                if valid_seq:
-                    contig_freq = nucleotides_frequences(record.seq, kmer, vars_list, nopal)
-                    if bam:
-                        cov = bam.count(record.id)
-                        if not cov:
-                            cov = 1
-                        if not ponderation:
-                            contig_freq.append(cov)
-                        else:
-                            for i in range(len(contig_freq)):
-                                contig_freq[i] = contig_freq[i]*cov
-                    contigs_index.append(record.id)
-                    matrix.append(contig_freq)
-                    count += 1
-                print(f"\rImported contigs : {count} | rejected contigs {not_valid}", end="")
+                contig_freq = nucleotides_frequences(record.seq, kmer, vars_list, nopal)
+                if bam:
+                    cov = bam.count(record.id)
+                    if cov:
+                        contig_freq.append(cov)
+                    else:
+                        contig_freq.append(1)
+                contigs_index.append(record.id)
+                matrix.append(contig_freq)
+                count += 1
+                print(f"\rImported contigs : {count}", end="")
     print("\nLoading succesfully")
     if bam:
         vars_list.append("Cov")
@@ -97,6 +86,7 @@ def nucleotides_frequences(seq, kmer, vars_list, nopal):
                 matrix.append(var_dict[i]/length)
             else:
                 matrix.append(0)
+    print(matrix)
     return matrix
 
 
@@ -110,22 +100,19 @@ def pal(seq):
 def save(files, clust, contigs, output):
     print("sorting contigs")
     bins = {}
-    if not os.path.isdir(output):
-        os.makedirs(output)
     for file in files:
         f = open(file)
         with f:
             fasta = SeqIO.parse(f, "fasta")
             for record in fasta:
-                if record.id in contigs:
-                    bnumber = clust[contigs.index(record.id)]
-                    if bnumber in bins.keys():
-                        bins[bnumber].append(record)
-                    else:
-                        bins[bnumber] = [record]
+                bnumber = clust[contigs.index(record.id)]
+                if bnumber in bins.keys():
+                    bins[bnumber].append(record)
+                else:
+                    bins[bnumber] = [record]
     print("Writing data")
     for k in bins.keys():
-        if str(k) != '-1':
+        if k != -1:
             SeqIO.write(bins[k], f"{output}/{k}.fa", "fasta")
 
 
