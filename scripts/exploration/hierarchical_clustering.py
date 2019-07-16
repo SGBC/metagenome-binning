@@ -92,7 +92,7 @@ def main():
         "--bam",
         metavar='file.bam',
         type=str,
-        required=True
+        # required=True
     )
     parser.add_argument(
         '-m',

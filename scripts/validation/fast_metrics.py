@@ -17,7 +17,7 @@ from plotly.graph_objs import Heatmap, Layout, Figure
 import plotly.graph_objs as go
 from Bio import SeqIO
 
-from binning_viewer import load, recentring
+from binning_viewer import load, recentring, pal
 import datetime
 
 
@@ -202,8 +202,11 @@ def draw_bins_map(bins_paths, draw, setname, nopal=False):
     cov = []
     print("Looking for coverage:")
     for i in range(len(contig_name)):
-        if contig_name[i] != "separation":
+        r = 0
+        if "separation" not in contig_name[i]:
             r = int(bam.count(contig_name[i]))
+            if not r:
+                r = 0
             print(f"\r{round((i/len(contig_name))*100,2):>6}% {contig_name[i]:<10}: {r}", end=" "*10)
         else:
             r = 0
@@ -211,11 +214,17 @@ def draw_bins_map(bins_paths, draw, setname, nopal=False):
     print("\r100% SUCCES", " "*15)
     for l, c, g in zip(matrix, cov, gc):
         l.append(c)
-        l.append(g)
+        # l.append(g)
     matrix = recentring(matrix)
     now = datetime.datetime.now()
     print("Building bins map")
-    data = [Heatmap(z=matrix, y=contig_name, x=nucl_list+["COV", "GC"], colorscale='Viridis')]
+    if nopal:
+        temp_nucl_list = []
+        for i in nucl_list:
+            if i not in temp_nucl_list and pal(i) not in temp_nucl_list:
+                temp_nucl_list.append(i)
+        nucl_list = list(temp_nucl_list)
+    data = [Heatmap(z=matrix, y=contig_name, x=nucl_list+["COV"], colorscale='Viridis')]
     layout = Layout(title=f"{setname} - {now.day}/{now.month}/{now.year} | {now.hour}h{now.minute}")
     fig = Figure(data, layout)
     if draw:

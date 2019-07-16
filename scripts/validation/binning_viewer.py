@@ -27,8 +27,8 @@ def nucleotides_frequences(seq, kmer, vars_list, nopal):
             var_dict[buffer] = 1
         buffer = str(buffer[1:])
     matrix = []
+    nopal_vars = []
     if nopal:
-        nopal_vars = []
         for i in vars_list:
             if i not in nopal_vars and pal(i) not in nopal_vars:
                 nopal_vars.append(i)
@@ -49,11 +49,12 @@ def nucleotides_frequences(seq, kmer, vars_list, nopal):
     return matrix
 
 
-def load(files, kmer, nucl_list, pal=False, sep=False):
+def load(files, kmer, nucl_list, palindromes=False, sep=False):
     print("Loading contigs")
     l_matrix = []
     contigs_table, gc = [], []
     count = 0
+    count_sep = 0
     for file in files:
         f = open(file)
         with f:
@@ -66,11 +67,16 @@ def load(files, kmer, nucl_list, pal=False, sep=False):
                 print(f"\rImported contigs : {count}", end="")
         if sep:
             nb_var = len(nucl_list)
-            if pal:
-                nb_var=nb_var//2
+            if palindromes:
+                no_pal_list = []
+                for i in nucl_list:
+                    if i not in no_pal_list and pal(i) not in no_pal_list:
+                        no_pal_list.append(i)
+                nb_var = len(no_pal_list)
             l_matrix.append([0 for i in range(nb_var)])
             gc.append(0)
-            contigs_table.append("separation")
+            contigs_table.append(f"separation_{count_sep}")
+            count_sep += 1
     print("\nLoading succesfully")
     # n_matrix = np.array(l_matrix)
     return l_matrix, contigs_table, gc
@@ -117,8 +123,10 @@ def recentring(matrix):
 
 def pal(seq):
     pal_seq = [seq[i] for i in range(len(seq)-1, -1, -1)]
+    # print(pal_seq)
     p = {"A": "T", "T": "A", "G": "C", "C": "G"}
     pal_seq = "".join([p[i] for i in pal_seq])
+    # print("ok")
     return pal_seq
 
 

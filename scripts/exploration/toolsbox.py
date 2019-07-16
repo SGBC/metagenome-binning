@@ -10,11 +10,14 @@ from scipy.spatial.distance import pdist
 import os
 
 
-def load(files, kmer, bam, nopal=False, c_filter=0, ponderation=False):
+def load(files, kmer, bam, nopal=False, c_filter=0, ponderation=False, cd=False):
     vars_list = ["".join(i) for i in product("ATCG", repeat=kmer)]
     matrix, contigs_index = [], []
     count = 0
     not_valid = 0
+    genes_pos = None
+    if cd:
+        genes_pos = genes(cd)
     for file in files:
         f = open(file)
         with f:
@@ -27,6 +30,9 @@ def load(files, kmer, bam, nopal=False, c_filter=0, ponderation=False):
                         not_valid += 1
                 if valid_seq:
                     contig_freq = nucleotides_frequences(record.seq, kmer, vars_list, nopal)
+                    if genes_pos:
+                        coding = coding_density(genes_pos[record.id], len(str(record.seq)))
+                        contig_freq.append(coding)
                     if bam:
                         cov = bam.count(record.id)
                         if not cov:
@@ -50,6 +56,38 @@ def load(files, kmer, bam, nopal=False, c_filter=0, ponderation=False):
 
 def min_max(value, mini, maxi):
     return (value-mini)/(maxi-mini)
+
+
+def genes(path):
+    sequence = {}
+    with open(path, "r") as read_file:
+        for i in read_file.readlines():
+            if "#" not in i:
+                cut = i.split("\t")
+                if cut[0] in sequence.keys():
+                    sequence[cut[0]].append((int(cut[3]), int(cut[4])))
+                else:
+                    sequence[cut[0]] = [(int(cut[3]), int(cut[4]))]
+    return sequence
+
+
+def coding_density(genes_pos, len_seq):
+    """
+    Function that calculates the coding density of a sequence based on
+    its length and the position of its genes.
+    """
+    coding_region = 0
+    overlap_region = 0
+    for genes in genes_pos:
+        coding_region += (genes[1]-genes[0])
+    for genes in genes_pos[:-1]:
+        n_genes = genes_pos[genes_pos.index(genes)+1]
+        overlap_region += max(
+            0,
+            min(genes[1], n_genes[1])-max(genes[0], n_genes[0]))
+    coding = ((coding_region-overlap_region)/len_seq)*100
+    logger.debug(f" Coding density : {coding}")
+    return ((coding_region-overlap_region)/len_seq)*100
 
 
 def recentring(matrix):
