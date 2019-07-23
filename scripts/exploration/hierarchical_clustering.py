@@ -15,6 +15,8 @@ from sklearn.decomposition import PCA, NMF
 from multiprocessing import Pool
 from numpy import arange
 import pysam
+from time import sleep
+import traceback
 
 from sklearn.metrics import silhouette_score
 from sklearn.metrics import calinski_harabasz_score as ch_score
@@ -68,7 +70,7 @@ def main():
         "--output",
         metavar="output_folder",
         type=str,
-        default="results/hclust",
+        default="results/hclust/default",
         help="path to output folder"
     )
     # parser.add_argument(
@@ -106,6 +108,25 @@ def main():
         default=False,
         help="merge palyndromes"
     )
+        parser.add_argument(
+        "-f",
+        "--filter",
+        metavar="1500",
+        type=int,
+        default=0
+    )
+    parser.add_argument(
+        "--cd",
+        type=str,
+        help="Input the .gff protfile"
+    )
+    parser.add_argument(
+        "-w",
+        "--weighting",
+        action="store_true",
+        default=False,
+        help="Weights the tetranucleotide frequency of contigs by their reads coverage."
+    )
     args = parser.parse_args()
     if args.method not in ['ball-hall', 'dunn', "silhouette", "ch-index", "db-index"] and not args.clusters:
             print(f"{args.method} was not reconized :/")
@@ -115,7 +136,7 @@ def main():
     bam = None
     if args.bam:
         bam = pysam.AlignmentFile(args.bam, "rb")
-    nf_matrix, c_tables, nucl_list = toolsbox.load(args.input, kmer, bam, nopal=args.nopal)
+    nf_matrix, c_tables, nucl_list = toolsbox.load(args.input, kmer, bam, nopal=args.nopal, c_filter=args.filter, ponderation=args.weighting, cd=args.cd)
     print("Pairwise distances calculation")
     output = f"{args.output}"
     os.makedirs(f"{output}", exist_ok=True)
@@ -181,4 +202,14 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as E:
+        for i in range(3):
+            print("\a", end='\r')
+            sleep(0.33)
+        print(traceback.format_exc())
+    except KeyboardInterrupt:
+        print("\nYou have kill me :'(  MUURRRRDDDDEEEERRRRR !!!!!\a")
+    else:
+        print("Done")

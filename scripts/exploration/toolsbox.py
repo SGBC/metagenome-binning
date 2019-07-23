@@ -31,7 +31,10 @@ def load(files, kmer, bam, nopal=False, c_filter=0, ponderation=False, cd=False)
                 if valid_seq:
                     contig_freq = nucleotides_frequences(record.seq, kmer, vars_list, nopal)
                     if genes_pos:
-                        coding = coding_density(genes_pos[record.id], len(str(record.seq)))
+                        if record.id in genes_pos.keys():
+                            coding = coding_density(genes_pos[record.id], len(str(record.seq)))
+                        else:
+                            coding = 0
                         contig_freq.append(coding)
                     if bam:
                         cov = bam.count(record.id)
@@ -86,7 +89,7 @@ def coding_density(genes_pos, len_seq):
             0,
             min(genes[1], n_genes[1])-max(genes[0], n_genes[0]))
     coding = ((coding_region-overlap_region)/len_seq)*100
-    logger.debug(f" Coding density : {coding}")
+    # logger.debug(f" Coding density : {coding}")
     return ((coding_region-overlap_region)/len_seq)*100
 
 

@@ -9,6 +9,8 @@ import argparse
 from hashlib import sha256
 import pysam
 from itertools import product
+from time import sleep
+import traceback
 
 from sklearn.metrics import homogeneity_score, completeness_score, fowlkes_mallows_score
 
@@ -31,7 +33,7 @@ def compile_data(bins_paths, metrics_index):
         with open(bin_path) as f:
             fasta = SeqIO.parse(f, "fasta")
             for record in fasta:
-                seq_number +=1
+                seq_number += 1
                 if record.id in metrics_index.keys():
                     print(f"\r{record.id}", end=" "*10)
                     if sha256(str(record.seq).encode()).hexdigest() == metrics_index[record.id][2]:
@@ -369,4 +371,14 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as E:
+        for i in range(3):
+            print("\a", end='\r')
+            sleep(0.33)
+        print(traceback.format_exc())
+    except KeyboardInterrupt:
+        print("\nYou have kill me :'(  MUURRRRDDDDEEEERRRRR !!!!!\a")
+    else:
+        print("Done")

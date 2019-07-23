@@ -37,14 +37,14 @@ def main():
         "--output",
         metavar="output_folder",
         type=str,
-        default="results/K-means",
+        default="results/K-means/default",
         help="path to output folder"
     )
     parser.add_argument(
         "--bam",
         metavar='file.bam',
         type=str,
-        required=True
+        # required=True
     )
     parser.add_argument(
         '-m',
@@ -61,17 +61,42 @@ def main():
         default=20
     )
     parser.add_argument(
+        "-k",
+        "--kmer",
+        default=4,
+        type=int
+    )
+    parser.add_argument(
         "--nopal",
         action="store_true",
         default=False,
         help="merge palindromes"
     )
+    parser.add_argument(
+        "-f",
+        "--filter",
+        metavar="1500",
+        type=int,
+        default=0
+    )
+    parser.add_argument(
+        "--cd",
+        type=str,
+        help="Input the .gff protfile"
+    )
+    parser.add_argument(
+        "-w",
+        "--weighting",
+        action="store_true",
+        default=False,
+        help="Weights the tetranucleotide frequency of contigs by their reads coverage."
+    )
     args = parser.parse_args()
     bam = None
     if args.bam:
         bam = pysam.AlignmentFile(args.bam, "rb")
-    kmer = 4
-    nf_matrix, c_tables, nucl_list = toolsbox.load(args.input, kmer, bam, nopal=args.nopal)
+    kmer = args.kmer
+    nf_matrix, c_tables, nucl_list = toolsbox.load(args.input, kmer, bam, nopal=args.nopal, c_filter=args.filter, ponderation=args.weighting, cd=args.cd)
     matrix = squareform(pdist(np.array(toolsbox.recentring(nf_matrix))), "cityblock")
     nf_matrix = np.array(nf_matrix)
     vars_clust = []
@@ -119,4 +144,14 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as E:
+        for i in range(3):
+            print("\a", end='\r')
+            sleep(0.33)
+        print(traceback.format_exc())
+    except KeyboardInterrupt:
+        print("\nYou have kill me :'(  MUURRRRDDDDEEEERRRRR !!!!!\a")
+    else:
+        print("Done")
