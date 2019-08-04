@@ -116,3 +116,4 @@ scripts/4NF_output
 metrics/
 *.html
 results*
+old*

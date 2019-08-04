@@ -204,7 +204,7 @@ def compile_data(query_index):
                 bins_sect.append(sect)
     for b in bins_name:
         for contig in query_index[b].keys():
-            cid, specie, code = contig,"",""
+            cid, specie, code = contig, "", ""
             if isinstance(query_index[b][contig]['andi'], list) and isinstance(query_index[b][contig]['diamond'], list):
                 consensus = []
                 for i in query_index[b][contig]['andi']:
@@ -253,7 +253,10 @@ def compile_data(query_index):
                 specie = query_index[b][contig]['andi']
                 code = "ADU"
             else:
-                bins_compo[b]["consensus"]["Conflicts"] += query_index[b][contig]['lenght']
+                # specie = query_index[b][contig]['diamond']
+                specie = query_index[b][contig]['andi']
+                code = "ADOC"
+                # bins_compo[b]["consensus"]["Conflicts"] += query_index[b][contig]['lenght']
             final_index[cid] = [specie, code]
     return final_index
 
@@ -286,7 +289,7 @@ def main():
     parser.add_argument(
         "-i",
         "--input",
-        metavar=".fna",
+        metavar="samples/contigs/final.contigs.fa",
         type=str,
         required=True,
         help="Input contigs files in nucleic fasta format",

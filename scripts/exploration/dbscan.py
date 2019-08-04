@@ -141,6 +141,8 @@ def main():
             else:
                 bound_down = thresholds_computed[scores.index(max(scores))] - 2*t
                 bound_up = thresholds_computed[scores.index(max(scores))] + 2*t
+            if bound_down < 0:
+                bound_down = 0
     toolsbox.save(args.input, def_cluster, c_tables, args.output)
 
 if __name__ == "__main__":

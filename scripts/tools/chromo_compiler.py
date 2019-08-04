@@ -6,6 +6,8 @@ import os
 
 from Bio import SeqIO
 
+
+print("Run chromo_compiler")
 ref = {}
 
 REF_PATH = "samples/chromosomes"

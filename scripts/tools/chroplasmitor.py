@@ -77,7 +77,9 @@ Extracts and separates chromosome, plamids and mitochondrion from a fasta file"
     )
 
     args = parser.parse_args()
+    print('Run chroplasmitor')
     extract(args)
+    print("Done")
 
 
 if __name__ == "__main__":

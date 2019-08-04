@@ -4,6 +4,7 @@
 import subprocess
 import os
 import shutil
+import argparse
 
 REF_path = "samples/chromosomes/"
 
@@ -33,12 +34,38 @@ def prokka(ref_path, ref_name, outdir):
     subprocess.run(args)
 
 
-print("starting")
-os.makedirs("samples/prot_map", exist_ok=True)
-refs = os.listdir(REF_path)
-refs_path = [f"{REF_path}{i}" for i in refs]
-refs_name = [f"{i[:-4]}" for i in refs]
-for i in range(0, len(refs)):
-    print(f"run prokka on {refs_name[i]}")
-    prokka(refs_path[i], refs_name[i], "samples/prot_map")
-print("done")
+def main():
+    desc = "desc here"
+    parser = argparse.ArgumentParser(
+        prog="prot_map_ref",
+        description=desc
+        )
+    parser.add_argument(
+        "-i",
+        "--input",
+        metavar="samples/chromosomes/[A-Z]*.fna",
+        type=str,
+        required=True,
+        help="Input contigs files in proteic fasta format",
+        nargs="+"
+    )
+    parser.add_argument(
+        "-o",
+        "--output",
+        metavar="prot_map_folder",
+        type=str,
+        help="Output_folder",
+        default="samples/prot_map"
+    )
+    args = parser.parse_args()
+    print("starting")
+    os.makedirs(args.output, exist_ok=True)
+    refs_path = args.input
+    refs_name = [os.path.basename(i).split(".")[0] for i in refs_path]
+    for i in range(0, len(refs_path)):
+        print(f"run prokka on {refs_name[i]}")
+        prokka(refs_path[i], refs_name[i], args.output)
+    print("done")
+
+if __name__ == "__main__":
+    main()

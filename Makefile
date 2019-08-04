@@ -7,27 +7,27 @@ lblue = \e[1m\e[1;36m
 info:
 	@echo -e '"make info" \tto show this message \t\t$(green)(implemented)$(blk)'
 	@echo -e '"make samples" \tto generate contigs \t\t$(green)(implemented)$(blk)'
-	@echo -e "include "make dl_samples", "make extract", "make reads", "make contigs"
+	@echo -e 'include "make dl_samples", "make extract", "make reads", "make contigs"'
 	@echo -e '"make bins" \tto generate bins \t\t$(green)(implemented)$(blk)'
-	@echo -e "include "make metabat", "make concoct"
-	@echo -e '"make metrics"\tto evaluate binning\t\t$(yellow)(not yet fully implemented)$(blk)'
-	@echo -e '"make all" \tto generate contigs and bins \t$(yellow)(not yet fully implemented)$(blk)'
+	@echo -e 'include "make metabat", "make concoct"'
+	@echo -e '"make build_metrics_index"\tto compute an alignement between contigs and originals chomosomes.\t$(green)(implemented)$(blk)'
+	@echo -e '"make all" \tto generate contigs, metrics_index and bins by concoct, metabat and experimentals algorithme \t$(yellow)(not yet fully implemented)$(blk)'
 
 samples: dl_samples extract reads contigs
 
 bins: metabat concoct
 
-metrics:
-	@echo -e '$(yellow)! Metrics are not yet fully implemented$(blk)'
-	
+build_metrics_index: samples/diamond_db/*
+	#@echo -e '$(yellow)Metrics are not yet fully implemented$(blk)'
+	@scripts/validation/precomputed_refindex.py -i samples/contigs/final.contigs.fa -o samples/ -r samples/chromosomes/all_chromo.fna --db samples/diamond_db/* --index samples/chromosomes/index_chromo
 
-# samples/diamond_db/*: samples/prot_map/*
-# 	scripts/diamond_db.py
+samples/diamond_db/*: samples/prot_map/[A-Z]*.faa
+	scripts/tools/diamond_db.py -i samples/prot_map/*.faa 
 
-# samples/prot_map/*: samples/contigs/final.contigs.fa
-# 	scripts/prot_map_ref.py
+samples/prot_map/*: samples/contigs/final.contigs.fa
+	scripts/tools/prot_map_ref.py -i samples/chromosomes/[A-Z]*.fna
 
-all: samples bins 
+all: samples build_metrics_index bins 
 
 dl_samples:
 	@mkdir -p samples
@@ -61,74 +61,86 @@ extract:
 	@mv samples/*.fna samples/complete_genomes
 	@echo It looks clean :D
 
-reads:
+reads: 
 	@echo -e "$(lblue)# Generating reads$(blk)"
-	@qsub reads.sh
-contigs:
+	@./scripts/tools/chroplasmitor.py -g samples/complete_genomes/*.fna -o samples
+	@./scripts/tools/chromo_compiler.py
+	@mkdir -p samples/reads
+	@iss generate --genomes samples/chromosomes/all_chromo.fna --abundance_file scripts/abundance_file --model hiseq --output samples/reads/reads --n_reads 17M --cpus `grep -c ^processor /proc/cpuinfo`
+
+samples/reads/reads_R1.fastq: samples/complete_genomes/Bacillus_subtilis.fna samples/complete_genomes/Cryptococcus_neoformans.fna samples/complete_genomes/Enterococcus_faecalis.fna samples/complete_genomes/Escherichia_coli.fna samples/complete_genomes/Lactobacillus_fermentum.fna samples/complete_genomes/Listeria_monocytogenes.fna samples/complete_genomes/Pseudomonas_aeruginosa.fna samples/complete_genomes/Saccharomyces_cerevisiae.fna samples/complete_genomes/Salmonella_enterica.fna samples/complete_genomes/Staphylococcus_aureus.fna
+	make reads
+
+samples/reads/reads_R2.fastq: samples/complete_genomes/Bacillus_subtilis.fna samples/complete_genomes/Cryptococcus_neoformans.fna samples/complete_genomes/Enterococcus_faecalis.fna samples/complete_genomes/Escherichia_coli.fna samples/complete_genomes/Lactobacillus_fermentum.fna samples/complete_genomes/Listeria_monocytogenes.fna samples/complete_genomes/Pseudomonas_aeruginosa.fna samples/complete_genomes/Saccharomyces_cerevisiae.fna samples/complete_genomes/Salmonella_enterica.fna samples/complete_genomes/Staphylococcus_aureus.fna
+	make reads
+
+contigs: 
 	@echo -e "$(lblue)# Generating contigs$(blk)"
-	@qsub contigs.sh
+	@rm -rf samples/contigs
+	@megahit -1 samples/reads/reads_R1.fastq -2 samples/reads/reads_R2.fastq -o samples/contigs/
 
 samples/mapping/reads.bam: samples/contigs/final.contigs.fa
 	@echo -e "$(lblue)# Mapping reads$(blk)"
-	@qsub mapping.sh
+	@mkdir -p samples/mapping
+	echo bowtie2-build
+	@bowtie2-build samples/contigs/final.contigs.fa samples/mapping/bt2_index_base
+	echo bowtie2 -x
+	@bowtie2 -p `grep -c ^processor /proc/cpuinfo` -x samples/mapping/bt2_index_base -1 samples/reads/reads_R1.fastq -2 samples/reads/reads_R2.fastq | samtools view -bS -o samples/mapping/reads_to_sort.bam
+	echo samtools
+	@samtools sort samples/mapping/reads_to_sort.bam -o samples/mapping/reads.bam
+	@samtools index samples/mapping/reads.bam
 
-metabat: samples/mapping/reads.bam 
+samples/prot_map/contigs_genes.gff: samples/contigs/final.contigs.fa
+	mkdir -p samples/prot_map
+	prodigal -i samples/contigs/final.contigs.fa -g 11 -f gff -m -o samples/prot_map/contigs_genes.gff
+
+samples/contigs/final.contigs.fa: samples/reads/reads_R1.fastq samples/reads/reads_R2.fastq
+	make contigs
+
+results/metabat/fasta_bins/*: samples/mapping/reads.bam
 	@echo -e "$(yellow)=== Metabat ===$(blk)"
-	@qsub metabat.sh
+	@runMetaBat.sh -m 1500 samples/contigs/final.contigs.fa samples/mapping/reads.bam
+	@mkdir -p results/metabat/fasta_bins
+	@mv final.contigs.fa.metabat-bins1500 results/metabat/
+	@mv final.contigs.fa.depth.txt results/metabat/
+	@mv final.contigs.fa.paired.txt results/metabat/
+	@mv results/metabat/final.contigs.fa.metabat-bins1500/* results/metabat/fasta_bins
+	@rm -r results/metabat/final.contigs.fa.metabat-bins1500
+	@scripts/tools/metabin_rename.py
 
-concoct: samples/mapping/reads.bam
+results/concoct/fasta_bins/*: samples/mapping/reads.bam
 	@echo -e "$(yellow)=== Concoct ===$(blk)"
-	@qsub concoct.sh
+	@mkdir -p results/concoct
+	@echo cut_up_fasta
+	@cut_up_fasta.py samples/contigs/final.contigs.fa  -c 10000 -o 0 --merge_last -b results/concoct/contigs_10K.bed > results/concoct/contigs_10K.fa
+	@echo concoct_coverage_table
+	@concoct_coverage_table.py results/concoct/contigs_10K.bed samples/mapping/reads.bam > results/concoct/coverage_table.tsv
+	@concoct --composition_file results/concoct/contigs_10K.fa --coverage_file results/concoct/coverage_table.tsv -b results/concoct/output/
+	@rm -rf results/concoct/fasta_bins
+	@merge_cutup_clustering.py results/concoct/output/clustering_gt1000.csv > results/concoct/output/clustering_merged.csv
+	@mkdir results/concoct/fasta_bins
+	@extract_fasta_bins.py samples/contigs/final.contigs.fa results/concoct/output/clustering_merged.csv --output_path results/concoct/fasta_bins
 
-clustering:
-	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/Optimale10 --bam samples/mapping/reads.bam -c 10
-	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/ball-hall-30 -m ball-hall --bam samples/mapping/reads.bam -c 30
-	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/dunn-30 -m dunn --bam samples/mapping/reads.bam -c 30
-	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/silhouette-30 -m silhouette --bam samples/mapping/reads.bam -c 30
-	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/ch-index-30 -m ch-index --bam samples/mapping/reads.bam -c 30
-	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/db-index-30 -m ball-hall --bam samples/mapping/reads.bam -c 30
-	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/ball-hall-30-nopal -m ball-hall --bam samples/mapping/reads.bam -c 30 --nopal
-	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/dunn-30-nopal -m dunn --bam samples/mapping/reads.bam -c 30 --nopal
-	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/silhouette-30-nopal -m silhouette --bam samples/mapping/reads.bam -c 30 --nopal
-	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/ch-index-30-nopal -m ch-index --bam samples/mapping/reads.bam -c 30 --nopal
-	./scripts/exploration/k-means.py -i samples/contigs/final.contigs.fa -o results/K-means/db-index-30-nopal -m ball-hall --bam samples/mapping/reads.bam -c 30 --nopal
-	
-	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/Optimale10 -c 10
-	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/ball-hall -m ball-hall
-	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/dunn -m dunn
-	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/silhouette -m silhouette
-	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/ch-index -m ch-index
-	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/db-index -m db-index
-	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/ball-hall-nopal -m ball-hall --nopal
-	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/dunn-nopal -m dunn --nopal
-	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/silhouette-nopal -m silhouette --nopal
-	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/ch-index-nopal -m ch-index --nopal
-	./scripts/exploration/hierarchical_clustering.py -i samples/contigs/final.contigs.fa --bam samples/mapping/reads.bam -o results/H_clust/db-index-nopal -m db-index --nopal
+metabat: results/metabat/fasta_bins/* 
+	@echo -e "$(green)=== Metabat done ===$(blk)"
+
+concoct: results/concoct/fasta_bins/*
+	@echo -e "$(green)=== Concoct done ===$(blk)"
+
+clustering: samples/mapping/reads.bam samples/prot_map/contigs_genes.gff
+	scripts/exploration/hierarchical_clustering.sh
+	scripts/exploration/kmeans.sh
+	scripts/exploration/dbscan.sh
+	scripts/exploration/gmm.sh
+	scripts/exploration/vbgmm.sh
+	scripts/exploration/affinity_propagation.sh
 
 report:
-	scripts/validation/fast_metrics.py -i results/metabat/fasta_bins/* -m samples/seq_index.json -n "Metabat" -o graphs/metabat/ --map
-	scripts/validation/fast_metrics.py -i results/concoct/fasta_bins/* -m samples/seq_index.json -n "concoct" -o graphs/concoct/ --map
-
-	scripts/validation/fast_metrics.py -i results/H_clust/Optimale10/* -m samples/seq_index.json -n "H_clust Optimal (nb_clust = 10)" -o graphs/H_clust/ --map
-	scripts/validation/fast_metrics.py -i results/H_clust/ball-hall/* -m samples/seq_index.json -n "H_clust ball-hall" -o graphs/H_clust/ --map
-	scripts/validation/fast_metrics.py -i results/H_clust/ball-hall-nopal/* -m samples/seq_index.json -n "H_clust ball-hall nopal" -o graphs/H_clust/ --map
-	scripts/validation/fast_metrics.py -i results/H_clust/ch-index/* -m samples/seq_index.json -n "H_clust ch-index" -o graphs/H_clust/ --map
-	scripts/validation/fast_metrics.py -i results/H_clust/ch-index-nopal/* -m samples/seq_index.json -n "H_clust ch-index-nopal" -o graphs/H_clust/ --map
-	scripts/validation/fast_metrics.py -i results/H_clust/db-index/* -m samples/seq_index.json -n "H_clust db-index" -o graphs/H_clust/ --map
-	scripts/validation/fast_metrics.py -i results/H_clust/db-index-nopal/* -m samples/seq_index.json -n "H_clust db-index-nopal" -o graphs/H_clust/ --map
-	scripts/validation/fast_metrics.py -i results/H_clust/dunn/* -m samples/seq_index.json -n "H_clust dunn" -o graphs/H_clust/ --map
-	scripts/validation/fast_metrics.py -i results/H_clust/dunn-nopal/* -m samples/seq_index.json -n "H_clust dunn-nopal" -o graphs/H_clust/ --map
-	scripts/validation/fast_metrics.py -i results/H_clust/silhouette/* -m samples/seq_index.json -n "H_clust silhouette" -o graphs/H_clust/ --map
-	scripts/validation/fast_metrics.py -i results/H_clust/silhouette-nopal/* -m samples/seq_index.json -n "H_clust silhouette-nopal" -o graphs/H_clust/ --map
-
-	scripts/validation/fast_metrics.py -i results/K-means/Optimale10/* -m samples/seq_index.json -n "K-means Optimal (nb_clust = 10)" -o graphs/K-means/ --map
-	scripts/validation/fast_metrics.py -i results/K-means/ball-hall-30/* -m samples/seq_index.json -n "K-means ball-hall (nb_max_clust = 29)" -o graphs/K-means/ --map
-	scripts/validation/fast_metrics.py -i results/K-means/ball-hall-30-nopal/* -m samples/seq_index.json -n "K-means ball-hall nopal (nb_max_clust = 29)" -o graphs/K-means/ --map
-	scripts/validation/fast_metrics.py -i results/K-means/ch-index-30/* -m samples/seq_index.json -n "K-means ch-index (nb_max_clust = 29)" -o graphs/K-means/ --map
-	scripts/validation/fast_metrics.py -i results/K-means/ch-index-30-nopal/* -m samples/seq_index.json -n "K-means ch-index-nopal (nb_max_clust = 29)" -o graphs/K-means/ --map
-	scripts/validation/fast_metrics.py -i results/K-means/db-index-30/* -m samples/seq_index.json -n "K-means db-index (nb_max_clust = 29)" -o graphs/K-means/ --map
-	scripts/validation/fast_metrics.py -i results/K-means/db-index-30-nopal/* -m samples/seq_index.json -n "K-means db-index-nopal (nb_max_clust = 29)" -o graphs/K-means/ --map
-	scripts/validation/fast_metrics.py -i results/K-means/dunn-30/* -m samples/seq_index.json -n "K-means dunn (nb_max_clust = 29)" -o graphs/K-means/ --map
-	scripts/validation/fast_metrics.py -i results/K-means/dunn-30-nopal/* -m samples/seq_index.json -n "K-means dunn-nopal (nb_max_clust = 29)" -o graphs/K-means/ --map
-	scripts/validation/fast_metrics.py -i results/K-means/silhouette-30/* -m samples/seq_index.json -n "K-means silhouette (nb_max_clust = 29)" -o graphs/K-means/ --map
-	scripts/validation/fast_metrics.py -i results/K-means/silhouette-30-nopal/* -m samples/seq_index.json -n "K-means silhouette-nopal (nb_max_clust = 29)" -o graphs/K-means/ --map
+	./scripts/validation/fast_metrics.py -m samples/seq_index.json --map --nopal -o graphs/METABAT/ -i results/metabat/fasta_bins/* -n "metabat_set"
+	./scripts/validation/fast_metrics.py -m samples/seq_index.json --map --nopal -o graphs/CONCOCT/ -i results/concoct/fasta_bins/* -n "concoct_set"
+	scripts/validation/hierarchical_clustering_metrics.sh
+	scripts/validation/kmeans_metrics.sh
+	scripts/validation/dbscan_metrics.sh
+	scripts/validation/gmm_metrics.sh
+	scripts/validation/vbgmm_metrics.sh
+	scripts/validation/affinity_propagation_metrics.sh

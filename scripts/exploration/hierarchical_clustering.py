@@ -14,6 +14,7 @@ from scipy.spatial.distance import squareform, pdist
 from sklearn.decomposition import PCA, NMF
 from multiprocessing import Pool
 from numpy import arange
+import numpy as np
 import pysam
 from time import sleep
 import traceback
@@ -73,17 +74,17 @@ def main():
         default="results/hclust/default",
         help="path to output folder"
     )
-    # parser.add_argument(
-    #     '--pca',
-    #     metavar="0.95",
-    #     type=float,
-    #     help="% of variance conserved in set"
-    # )
-    # parser.add_argument(
-    #     "--nmf",
-    #     metavar="25",
-    #     type=int
-    # )
+    parser.add_argument(
+        '--pca',
+        metavar="0.95",
+        type=float,
+        help="% of variance conserved in set"
+    )
+    parser.add_argument(
+        "--nmf",
+        metavar="25",
+        type=int
+    )
     parser.add_argument(
         "-c",
         "--clusters",
@@ -108,7 +109,7 @@ def main():
         default=False,
         help="merge palyndromes"
     )
-        parser.add_argument(
+    parser.add_argument(
         "-f",
         "--filter",
         metavar="1500",
@@ -140,14 +141,14 @@ def main():
     print("Pairwise distances calculation")
     output = f"{args.output}"
     os.makedirs(f"{output}", exist_ok=True)
-    # if args.pca:
-    #     print("PCA activated")
-    #     pca = PCA(n_components=args.pca)
-    #     nf_matrix = pca.fit_transform(nf_matrix)
-    # if args.nmf:
-    #     print("NMF activated")
-    #     nmf = NMF(n_components=args.nmf)
-    #     nf_matrix = nmf.fit_transform(nf_matrix)
+    if args.pca:
+        print("PCA activated")
+        pca = PCA(n_components=args.pca)
+        nf_matrix = pca.fit_transform(nf_matrix)
+    if args.nmf:
+        print("NMF activated")
+        nmf = NMF(n_components=args.nmf)
+        nf_matrix = nmf.fit_transform(nf_matrix)
     matrix = squareform(pdist(nf_matrix, "cityblock"))
     vars_clust = {}
     def_cluster = None
@@ -172,16 +173,23 @@ def main():
                 var_clust.sort()
                 for i in range(len(var_clust)):
                     dist, cluster = var_clust[i]
-                    var = 0
+                    if args.method in ["ball-hall", "db-index"]:
+                        var = np.infty
+                    else:
+                        var = -np.infty
+                    diff_clust = []
+                    for j in cluster:
+                        if j not in diff_clust:
+                            diff_clust.append(j)
                     if args.method == "ball-hall":
                         var = toolsbox.ball_hall(cluster, matrix)
-                    elif args.method == "dunn":
+                    elif args.method == "dunn" and len(diff_clust) > 1:
                         var = toolsbox.dunn(cluster, c_tables, matrix)
-                    elif args.method == "silhouette":
+                    elif args.method == "silhouette" and len(diff_clust) > 1:
                         var = silhouette_score(matrix, cluster, metric="cityblock")
-                    elif args.method == "ch-index":
+                    elif args.method == "ch-index" and len(diff_clust) > 1:
                         var = ch_score(matrix, cluster)
-                    else:  # DB-score
+                    elif args.method == "db-index" and len(diff_clust) > 1:  # DB-score
                         var = db_score(matrix, cluster)
                     var_clust[i] = (var, dist, cluster)
                     vars_clust[dist] = cluster

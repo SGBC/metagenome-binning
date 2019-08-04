@@ -71,7 +71,7 @@ def compile_data(bins_paths, metrics_index):
             # print(contig[3])
             if contig[3] in ["ADL", "ALDO", "AODL", "ADO"]:
                 trust['certain'] += contig[2]
-            elif contig[3] in ["AUD", "ADU", "ALDOC", "AODLC"]:
+            elif contig[3] in ["AUD", "ADU", "ALDOC", "AODLC", "ADOC"]:
                 trust['doubt'] += contig[2]
             else:
                 trust['uncertain'] += contig[2]

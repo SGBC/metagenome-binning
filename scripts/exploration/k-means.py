@@ -15,7 +15,7 @@ from scipy.spatial.distance import squareform, pdist
 from sklearn.metrics import silhouette_score
 from sklearn.metrics import calinski_harabasz_score as ch_score
 from sklearn.metrics import davies_bouldin_score as db_score
-
+from time import sleep
 
 def main():
     desc = "desc here"
@@ -57,8 +57,7 @@ def main():
         "--clusters",
         metavar='3',
         type=int,
-        help="Number of cluster made by algorithm if any method specified or the maximum of cluster tested if method is specified",
-        default=20
+        help="Number of cluster made by algorithm if any method specified or the maximum of cluster tested if method is specified"
     )
     parser.add_argument(
         "-k",
@@ -102,18 +101,19 @@ def main():
     vars_clust = []
     def_cluster = None
     print("Clustering")
-    nb_clusters = args.clusters
-    if nb_clusters < 1:
-        nb_clusters == 1
-    if args.method:
-        print("You choice the number of cluster, -m/--methode is not used")
+    # nb_clusters = args.clusters
+    # if nb_clusters < 1:
+    #     nb_clusters == 1
+    if args.clusters:
+        if args.method:
+            print("You choice the number of cluster, -m/--methode is not used")
         def_cluster = KM(n_clusters=args.clusters, n_jobs=os.cpu_count()).fit_predict(nf_matrix)
     else:
         if args.method not in ['ball-hall', 'dunn', "silhouette", "ch-index", "db-index"]:
             print(f"{args.method} was not reconized :/")
             exit(2)
         else:
-            for i in range(2, nb_clusters+1):
+            for i in range(2, 31):
                 print(f"Try {i:<2} cluster(s) :", end='')
                 cluster = KM(n_clusters=i, n_jobs=os.cpu_count()).fit_predict(matrix)
                 var = 0

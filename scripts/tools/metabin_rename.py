@@ -2,6 +2,8 @@
 # -*- coding: utf-8
 
 import os
+
+
 path = "results/metabat/fasta_bins/"
 files = os.listdir(path)
 nw_names = []
