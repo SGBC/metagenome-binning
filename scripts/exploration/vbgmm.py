@@ -114,6 +114,7 @@ def main():
     print("Clustering")
     lowest_bic, best_nb = np.infty, 0
     if not args.clusters:
+        print("Not args.clusters")
         bic_scores = []
         max_ch = -(np.infty)
         n_components_range = range(1, 51)

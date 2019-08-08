@@ -24,7 +24,7 @@ build_metrics_index: samples/diamond_db/*
 samples/diamond_db/*: samples/prot_map/[A-Z]*.faa
 	scripts/tools/diamond_db.py -i samples/prot_map/*.faa 
 
-samples/prot_map/*: samples/contigs/final.contigs.fa
+samples/prot_map/[A-Z]*.faa: samples/contigs/final.contigs.fa
 	scripts/tools/prot_map_ref.py -i samples/chromosomes/[A-Z]*.fna
 
 all: samples build_metrics_index bins 
@@ -63,6 +63,9 @@ extract:
 
 reads: 
 	@echo -e "$(lblue)# Generating reads$(blk)"
+	@rm -rf samples/chromosomes
+	@rm -rf samples/mitochondrions
+	@rm -rf samples/plasmids
 	@./scripts/tools/chroplasmitor.py -g samples/complete_genomes/*.fna -o samples
 	@./scripts/tools/chromo_compiler.py
 	@mkdir -p samples/reads
@@ -135,7 +138,7 @@ clustering: samples/mapping/reads.bam samples/prot_map/contigs_genes.gff
 	scripts/exploration/vbgmm.sh
 	scripts/exploration/affinity_propagation.sh
 
-report:
+report: build_metrics_index
 	./scripts/validation/fast_metrics.py -m samples/seq_index.json --map --nopal -o graphs/METABAT/ -i results/metabat/fasta_bins/* -n "metabat_set"
 	./scripts/validation/fast_metrics.py -m samples/seq_index.json --map --nopal -o graphs/CONCOCT/ -i results/concoct/fasta_bins/* -n "concoct_set"
 	scripts/validation/hierarchical_clustering_metrics.sh
