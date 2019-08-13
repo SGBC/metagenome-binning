@@ -169,7 +169,7 @@ def main():
             else:
                 print("    ", end="")
         print(f"Number of cluster found : {len(bins)}, {round(a, 3)}, {score_unit} {ch_score(matrix, def_cluster)}")
-    def_cluster = VBGMM(best_nb, covariance_type='full', weight_concentration_prior=weight_opti).fit_predict(matrix)
+    def_cluster = VBGMM(best_nb, covariance_type='tied', weight_concentration_prior=weight_opti).fit_predict(matrix)
     toolsbox.save(args.input, def_cluster, c_tables, args.output)
 
 if __name__ == "__main__":
