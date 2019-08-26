@@ -93,9 +93,8 @@ def main():
         exit(2)
     kmer = args.kmer
     nf_matrix, c_tables, nucl_list = toolsbox.load(args.input, kmer, bam, nopal=args.nopal, c_filter=args.filter, ponderation=args.weighting, cd=args.cd)
-    # matrix = squareform(pdist(np.array(toolsbox.recentring(nf_matrix))), "cityblock")
+    matrix = squareform(pdist(np.array(toolsbox.recentring(nf_matrix))), "cityblock")
     nf_matrix = np.array(nf_matrix)
-    matrix = nf_matrix
     print("Clustering")
     scores = []
     best_gmm = None
