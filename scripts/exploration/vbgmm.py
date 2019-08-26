@@ -109,8 +109,9 @@ def main():
         bam = None
     kmer = args.kmer
     nf_matrix, c_tables, nucl_list = toolsbox.load(args.input, kmer, bam, nopal=args.nopal, c_filter=args.filter, ponderation=args.weighting, cd=args.cd)
-    matrix = squareform(pdist(np.array(toolsbox.recentring(nf_matrix))), "cityblock")
+    # matrix = squareform(pdist(np.array(toolsbox.recentring(nf_matrix))), "cityblock")
     nf_matrix = np.array(nf_matrix)
+    matrix = nf_matrix
     print("Clustering")
     lowest_bic, best_nb = np.infty, 0
     if not args.clusters:

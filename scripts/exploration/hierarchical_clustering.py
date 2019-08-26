@@ -149,7 +149,8 @@ def main():
         print("NMF activated")
         nmf = NMF(n_components=args.nmf)
         nf_matrix = nmf.fit_transform(nf_matrix)
-    matrix = squareform(pdist(nf_matrix, "cityblock"))
+    # matrix = squareform(pdist(nf_matrix, "cityblock"))
+    matrix = nf_matrix
     vars_clust = {}
     def_cluster = None
     print("Clustering")
